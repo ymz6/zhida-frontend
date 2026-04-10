@@ -21,10 +21,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+// Ant Design
+import { StyleProvider } from '@ant-design/cssinjs'
+import { App, ConfigProvider } from 'antd'
+import zhCN from 'antd/locale/zh_CN'
+// for date-picker i18n
+import 'dayjs/locale/zh-cn'
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
+    <StyleProvider layer>
+      <ConfigProvider locale={zhCN}>
+        <App>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </App>
+      </ConfigProvider>
+    </StyleProvider>
   </StrictMode>,
 )
