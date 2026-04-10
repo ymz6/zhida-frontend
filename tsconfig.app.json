@@ -22,7 +22,9 @@
     },
 
     /* Linting */
-    "strict": true,
+    "strict": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // 忽略 orval 自动生成的文件
+  "exclude": ["src/api/generated"]
 }

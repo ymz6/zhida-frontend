@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
+    "gen:api": "orval"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^2.1.2",
@@ -16,6 +17,7 @@
     "@tanstack/react-query": "^5.97.0",
     "@tanstack/react-router": "^1.168.10",
     "antd": "^6.3.5",
+    "axios": "^1.15.0",
     "dayjs": "^1.11.20",
     "immer": "^11.1.4",
     "lucide-react": "^1.8.0",
@@ -35,6 +37,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "orval": "^8.7.0",
     "prettier": "^3.8.2",
     "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
