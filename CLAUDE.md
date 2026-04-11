@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 pnpm dev
 pnpm build
+pnpm ts:check       # TypeScript 类型检查
 pnpm format         # 格式化代码
 pnpm format:check   # 检查代码格式
 pnpm gen:api        # 从 OpenAPI 规范生成 API 客户端代码

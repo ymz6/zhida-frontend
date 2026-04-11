@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
-    "gen:api": "orval"
+    "gen:api": "orval",
+    "ts:check": "tsc -b"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^2.1.2",
