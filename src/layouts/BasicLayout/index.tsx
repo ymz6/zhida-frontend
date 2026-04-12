@@ -1,3 +1,4 @@
+import zhidaLogo from '@/assets/zhida-logo.svg'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Layout, Avatar, Dropdown, Menu } from 'antd'
 import type { MenuProps } from 'antd'
@@ -46,11 +47,11 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
           {/* Logo + 项目名称 */}
           <div className="flex shrink-0 items-center gap-2.5">
             <img
-              src={reactLogo}
+              src={zhidaLogo}
               alt="Logo"
-              className="h-7 w-7"
+              className="h-12 w-12"
             />
-            <span className="text-base font-semibold text-slate-800">Project Name</span>
+            <span className="text-base font-semibold text-slate-800">智搭</span>
           </div>
 
           {/* 导航菜单 */}
@@ -85,7 +86,7 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
         <div className="text-center">
           <p className="m-0 text-sm text-slate-500">
             © {new Date().getFullYear()}{' '}
-            <span className="font-medium text-slate-600">React Frontend Starter</span>. Designed by{' '}
+            <span className="font-medium text-slate-600">智搭低代码应用生成系统</span>. Designed by{' '}
             <a
               href="https://github.com/ymz6"
               target="_blank"
