@@ -1,16 +1,58 @@
 import zhidaLogo from '@/assets/zhida-logo.svg'
+import { useLogout } from '@/api/generated/endpoints/auth'
+import { queryClient } from '@/libs/query-client'
+import { useAuthSessionStore } from '@/stores/auth-session'
 import { useLocation, useNavigate } from '@tanstack/react-router'
-import { Layout, Avatar, Dropdown, Menu } from 'antd'
+import { App, Avatar, Button, Dropdown, Layout, Menu } from 'antd'
 import type { MenuProps } from 'antd'
+import { ChevronDown, LogOut, ShieldCheck, User } from 'lucide-react'
 import type { ReactNode } from 'react'
-import reactLogo from '@/assets/react.svg'
 
 /**
- *  基础的上中下布局
+ * 基础的上中下布局
  */
 export default function BasicLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { message, modal } = App.useApp()
+  const isAuthenticated = useAuthSessionStore((state) => Boolean(state.accessToken))
+  const userInfo = useAuthSessionStore((state) => state.userInfo)
+  const logoutMutation = useLogout()
+  const isAdmin = userInfo?.role === 1
+  const userDisplayName = userInfo?.nickname?.trim() || '未设置'
+  const userDisplayInitial = userInfo?.nickname?.trim().slice(0, 1).toUpperCase()
+
+  const finishLogout = (successMessage: string) => {
+    useAuthSessionStore.getState().clearSession()
+    queryClient.clear()
+    message.success(successMessage)
+    void navigate({
+      to: '/auth/login',
+      replace: true,
+    })
+  }
+
+  const confirmLogout = () => {
+    modal.confirm({
+      centered: true,
+      title: '确认退出登录？',
+      content: '退出后需要重新登录才能继续访问受保护内容。',
+      okText: '退出登录',
+      cancelText: '取消',
+      okButtonProps: {
+        danger: true,
+      },
+      onOk: async () => {
+        try {
+          await logoutMutation.mutateAsync()
+          finishLogout('退出登录成功')
+        } catch (error: any) {
+          message.error(error.message)
+          throw error
+        }
+      },
+    })
+  }
 
   const navItems = [
     { key: '/', label: '首页' },
@@ -23,15 +65,51 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
   }))
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    navigate({ to: key })
+    if (key === '/about') {
+      void navigate({ to: '/about' })
+      return
+    }
+
+    void navigate({ to: '/' })
   }
 
   const dropdownItems: MenuProps['items'] = [
-    { key: 'profile', label: '个人中心' },
-    { key: 'settings', label: '设置' },
+    {
+      key: 'profile',
+      label: '个人中心',
+      icon: <User className="size-4" />,
+    },
+    isAdmin
+      ? {
+          key: 'admin',
+          label: '后台系统',
+          icon: <ShieldCheck className="size-4" />,
+        }
+      : null,
     { type: 'divider' },
-    { key: 'logout', label: '退出登录', danger: true },
+    {
+      key: 'logout',
+      label: '退出登录',
+      danger: true,
+      icon: <LogOut className="size-4" />,
+    },
   ]
+
+  const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'profile') {
+      void navigate({ to: '/profile' })
+      return
+    }
+
+    if (key === 'admin') {
+      void navigate({ to: '/admin' })
+      return
+    }
+
+    if (key === 'logout') {
+      confirmLogout()
+    }
+  }
 
   // 用“最长前缀匹配”确定当前激活导航：/aaa/bbb 会命中 /aaa；多个命中取最长；'/' 仅在根路径激活
   const activeNavKey =
@@ -44,7 +122,6 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
     <Layout className="min-h-screen">
       <Layout.Header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 px-0 backdrop-blur-sm">
         <div className="mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
-          {/* Logo + 项目名称 */}
           <div className="flex shrink-0 items-center gap-2.5">
             <img
               src={zhidaLogo}
@@ -54,29 +131,50 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
             <span className="text-base font-semibold text-slate-800">智搭</span>
           </div>
 
-          {/* 导航菜单 */}
           <div className="flex min-w-0 flex-1 pl-8">
             <Menu
               mode="horizontal"
               items={menuItems}
               selectedKeys={[activeNavKey]}
               onClick={handleMenuClick}
-              className="flex-1 min-w-0 border-none! bg-transparent!"
+              className="min-w-0 flex-1 border-none! bg-transparent!"
             />
           </div>
 
-          {/* 用户区域 */}
-          <Dropdown
-            menu={{ items: dropdownItems }}
-            placement="bottom"
-          >
-            <button className="group flex shrink-0 cursor-pointer items-center gap-2">
-              <Avatar size={32}>USER</Avatar>
-              <span className="text-sm text-slate-600 transition-colors group-hover:text-slate-900">
-                用户
-              </span>
-            </button>
-          </Dropdown>
+          {isAuthenticated ? (
+            <Dropdown
+              menu={{
+                items: dropdownItems,
+                onClick: handleUserMenuClick,
+                className:
+                  '!w-32 !min-w-0 [&_.ant-dropdown-menu-item]:justify-center [&_.ant-dropdown-menu-item]:px-3 [&_.ant-dropdown-menu-item]:text-center [&_.ant-dropdown-menu-title-content]:flex-none',
+              }}
+              placement="bottomRight"
+              trigger={['hover']}
+            >
+              <button className="group flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-2 py-1 transition-colors hover:bg-slate-100/90 [&.ant-dropdown-open_.user-dropdown-chevron]:rotate-180">
+                <Avatar
+                  size={32}
+                  src={userInfo?.avatar}
+                  className="bg-slate-900 ring-1 ring-slate-200"
+                >
+                  {userDisplayInitial}
+                </Avatar>
+                <span className="max-w-28 truncate text-sm font-medium text-slate-700 transition-colors group-hover:text-slate-900">
+                  {userDisplayName}
+                </span>
+                <ChevronDown className="user-dropdown-chevron size-4 text-slate-400 transition-[color,transform] duration-200 group-hover:text-slate-600" />
+              </button>
+            </Dropdown>
+          ) : (
+            <Button
+              type="primary"
+              onClick={() => void navigate({ to: '/auth/login' })}
+              className="h-10 rounded-full px-4! text-sm font-medium shadow-sm shadow-blue-200/60"
+            >
+              登录 / 注册
+            </Button>
+          )}
         </div>
       </Layout.Header>
       <Layout.Content className="p-8">

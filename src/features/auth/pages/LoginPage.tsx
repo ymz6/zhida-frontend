@@ -1,3 +1,7 @@
+import { useLogin } from '@/api/generated/endpoints/auth'
+import type { LoginRequest } from '@/api/generated/models'
+import type { UserInfo } from '@/api/generated/models'
+import { useAuthSessionStore } from '@/stores/auth-session'
 import { useNavigate } from '@tanstack/react-router'
 import { App, Button, Form, Input } from 'antd'
 import { Lock, User } from 'lucide-react'
@@ -5,15 +9,23 @@ import { Lock, User } from 'lucide-react'
 export function LoginPage() {
   const navigate = useNavigate()
   const { message } = App.useApp()
-  const [form] = Form.useForm()
+  const [form] = Form.useForm<LoginRequest>()
+  const setSession = useAuthSessionStore((state) => state.setSession)
+  const loginMutation = useLogin()
 
-  const handleFinish = async (values: any) => {
+  const handleFinish = async (values: LoginRequest) => {
     try {
-      // TODO 发起登录请求
+      const response = await loginMutation.mutateAsync({ data: values })
+      const loginData = response.data as { accessToken: string; userInfo: UserInfo }
+
+      setSession({
+        accessToken: loginData.accessToken,
+        userInfo: loginData.userInfo,
+      })
       message.success('登录成功')
       void navigate({ to: '/' })
-    } catch (e: any) {
-      message.error(e?.message || '登录失败')
+    } catch (error: any) {
+      message.error(error.message)
     }
   }
 
@@ -60,6 +72,7 @@ export function LoginPage() {
           htmlType="submit"
           block
           size="large"
+          loading={loginMutation.isPending}
           className="h-11 rounded-lg font-medium shadow-none"
         >
           登录

@@ -1,20 +1,13 @@
 import zhidaLogo from '@/assets/zhida-logo.svg'
+import { useLogout } from '@/api/generated/endpoints/auth'
+import { queryClient } from '@/libs/query-client'
+import { useAuthSessionStore } from '@/stores/auth-session'
 import { useLocation, useNavigate } from '@tanstack/react-router'
-import { Avatar, Button, ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd'
+import { App, Avatar, Button, ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd'
 import type { MenuProps } from 'antd'
-import {
-  AppWindow,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Globe,
-  House,
-  LogOut,
-  ShieldCheck,
-  Users,
-} from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Globe, House, LogOut, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 const { Link: TypographyLink, Text } = Typography
 
@@ -25,120 +18,84 @@ const adminMenuItems = [
     icon: <House className="size-4" />,
   },
   {
-    key: '/admin/apps',
-    label: '应用管理',
-    icon: <AppWindow className="size-4" />,
-  },
-  {
     key: '/admin/users',
     label: '用户管理',
     icon: <Users className="size-4" />,
   },
-  {
-    key: 'team',
-    label: '组织与权限',
-    icon: <Users className="size-4" />,
-    children: [
-      {
-        key: '/admin/roles',
-        label: '角色权限',
-        icon: <ShieldCheck className="size-4" />,
-      },
-    ],
-  },
 ] satisfies NonNullable<MenuProps['items']>
 
-// 从菜单树里提取两类元数据。
-// 这套逻辑按递归方式处理菜单树，因此不限制嵌套层级；只要菜单继续遵守当前约定，就能一直生效：
-// 1. 真正可跳转的叶子菜单 key 以 '/' 开头，例如 '/admin/roles'
-// 2. 纯父级分组 key 不以 '/' 开头，例如 'team'、'roles'
-//
-// 返回结果包含：
-// 1. selectableRoutes：所有可用于路由匹配的叶子菜单 key
-// 2. parentMap：某个叶子菜单对应的整条祖先 key 链，用于自动展开父级菜单
-function getMenuMeta(items: NonNullable<MenuProps['items']>, ancestorKeys: string[] = []) {
-  const selectableRoutes: string[] = []
-  const parentMap: Record<string, string[]> = {}
-
-  items.forEach((item) => {
-    if (!item || !('key' in item) || typeof item.key !== 'string') return
-
-    if (item.key.startsWith('/')) {
-      selectableRoutes.push(item.key)
-
-      if (ancestorKeys.length > 0) {
-        parentMap[item.key] = ancestorKeys
-      }
-    }
-
-    if ('children' in item && Array.isArray(item.children) && item.children.length > 0) {
-      const nextAncestorKeys = item.key.startsWith('/') ? ancestorKeys : [...ancestorKeys, item.key]
-      const childMeta = getMenuMeta(item.children, nextAncestorKeys)
-      selectableRoutes.push(...childMeta.selectableRoutes)
-      Object.assign(parentMap, childMeta.parentMap)
-    }
-  })
-
-  return {
-    selectableRoutes: selectableRoutes.sort((left, right) => right.length - left.length),
-    parentMap,
-  }
-}
-
-// 菜单结构在模块加载时固定，元数据只需计算一次，后续渲染直接复用。
-const menuMeta = getMenuMeta(adminMenuItems)
-
-// 通过“最长前缀匹配”判断当前路径应该高亮哪个叶子菜单。
-// 例如 '/admin/roles/permissions' 会优先命中更长的 '/admin/roles/permissions'，
-// 而不是较短的 '/admin'。
 function getSelectedKey(pathname: string) {
-  return menuMeta.selectableRoutes.find((route) => pathname.startsWith(route)) ?? '/admin'
-}
+  if (pathname.startsWith('/admin/users')) {
+    return '/admin/users'
+  }
 
-// 根据当前选中的叶子菜单，取出它对应的整条祖先 key 链。
-// 这样在三级或更深层级下，也能一次性展开所有父菜单。
-function getOpenKeys(selectedKey: string) {
-  return menuMeta.parentMap[selectedKey] ?? []
+  return '/admin'
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
-
-  // 当前路由对应的菜单高亮项。
+  const { message, modal } = App.useApp()
+  const userInfo = useAuthSessionStore((state) => state.userInfo)
+  const logoutMutation = useLogout()
   const selectedKey = getSelectedKey(location.pathname)
   const [collapsed, setCollapsed] = useState(false)
-  // 当前展开的父级菜单；初始值根据选中的子菜单反推。
-  const [openKeys, setOpenKeys] = useState<string[]>(() => getOpenKeys(selectedKey))
-  // 控制右上角用户下拉菜单的展开状态，用来驱动箭头翻转。
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userDisplayName = userInfo?.nickname?.trim() || '未设置'
+  const userDisplayInitial = userInfo?.nickname?.trim().slice(0, 1).toUpperCase()
 
-  useEffect(() => {
-    const parentKeys = getOpenKeys(selectedKey)
+  const finishLogout = (successMessage: string) => {
+    useAuthSessionStore.getState().clearSession()
+    queryClient.clear()
+    message.success(successMessage)
+    void navigate({
+      to: '/auth/login',
+      replace: true,
+    })
+  }
 
-    if (parentKeys.length === 0) return
-
-    // 路由切换到子菜单时，确保它的父菜单保持展开。
-    setOpenKeys((prev) => [...new Set([...prev, ...parentKeys])])
-  }, [selectedKey])
+  const confirmLogout = () => {
+    modal.confirm({
+      centered: true,
+      title: '确认退出登录？',
+      content: '退出后需要重新登录才能继续访问受保护内容。',
+      okText: '退出登录',
+      cancelText: '取消',
+      okButtonProps: {
+        danger: true,
+      },
+      onOk: async () => {
+        try {
+          await logoutMutation.mutateAsync()
+          finishLogout('退出登录成功')
+        } catch (error: any) {
+          message.error(error.message)
+          throw error
+        }
+      },
+    })
+  }
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     const targetKey = String(key)
 
-    // 当前只保留 /admin 作为真实路由，其它菜单项先保留信息架构。
+    if (targetKey === '/admin/users') {
+      void navigate({ to: '/admin/users' })
+      return
+    }
+
     if (targetKey === '/admin') {
       void navigate({ to: '/admin' })
-      return
     }
   }
 
   const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
-    // 点击菜单项后先关闭下拉，再执行跳转。
-    setUserMenuOpen(false)
-
     if (key === 'site') {
       void navigate({ to: '/' })
       return
+    }
+
+    if (key === 'logout') {
+      confirmLogout()
     }
   }
 
@@ -185,37 +142,42 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 },
               ],
               onClick: handleUserMenuClick,
+              className:
+                '!w-32 !min-w-0 [&_.ant-dropdown-menu-item]:justify-center [&_.ant-dropdown-menu-item]:px-3 [&_.ant-dropdown-menu-item]:text-center [&_.ant-dropdown-menu-title-content]:flex-none',
             }}
-            open={userMenuOpen}
-            onOpenChange={setUserMenuOpen}
             placement="bottomRight"
             arrow
+            trigger={['hover']}
           >
             <Button
               type="text"
-              className="group h-auto! rounded-2xl! px-2! py-1! text-inherit! shadow-none! hover:bg-[#f7f7f4]!"
+              className="group h-auto! rounded-2xl! px-2! py-1! text-inherit! shadow-none! hover:bg-[#f7f7f4]! [&.ant-dropdown-open_.user-dropdown-chevron]:rotate-180"
             >
               <Flex
                 align="center"
                 gap={12}
               >
-                <Avatar className="bg-slate-900! text-xs! font-semibold!">A</Avatar>
+                <Avatar
+                  src={userInfo?.avatar}
+                  className="bg-slate-900! text-xs! font-semibold!"
+                >
+                  {userDisplayInitial}
+                </Avatar>
                 <Flex
                   vertical
                   className="text-left"
                 >
-                  <Text className="block truncate text-sm font-medium text-slate-800">管理员</Text>
+                  <Text className="block truncate text-sm font-medium text-slate-800">
+                    {userDisplayName}
+                  </Text>
                 </Flex>
-                <ChevronDown
-                  className={`size-4 text-slate-400 transition-[color,transform] duration-200 group-hover:text-slate-600 ${
-                    userMenuOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                <ChevronDown className="user-dropdown-chevron size-4 text-slate-400 transition-[color,transform] duration-200 group-hover:text-slate-600" />
               </Flex>
             </Button>
           </Dropdown>
         </Flex>
       </Layout.Header>
+
       <Layout
         hasSider
         className="bg-transparent pt-18"
@@ -234,7 +196,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   components: {
                     Menu: {
                       itemBg: 'transparent',
-                      subMenuItemBg: 'transparent',
                       itemMarginInline: 4,
                       itemMarginBlock: 4,
                       itemColor: '#525252',
@@ -243,8 +204,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                       itemSelectedColor: '#2563eb',
                       itemActiveBg: '#f5f5f4',
                       itemBorderRadius: 12,
-                      subMenuItemBorderRadius: 12,
-                      subMenuItemSelectedColor: '#2563eb',
                     },
                   },
                 }}
@@ -254,10 +213,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   inlineCollapsed={collapsed}
                   items={adminMenuItems}
                   selectedKeys={[selectedKey]}
-                  openKeys={openKeys}
-                  onOpenChange={setOpenKeys}
                   onClick={handleMenuClick}
-                  className="border-none! bg-transparent! [&_.ant-menu-item]:text-stone-600 [&_.ant-menu-item-icon]:text-stone-500 [&_.ant-menu-item-selected_.ant-menu-item-icon]:text-blue-600 [&_.ant-menu-submenu-title]:text-stone-600 [&_.ant-menu-submenu-title_.ant-menu-item-icon]:text-stone-500 [&_.ant-menu-submenu-selected>.ant-menu-submenu-title]:text-blue-600 [&_.ant-menu-submenu-selected>.ant-menu-submenu-title_.ant-menu-item-icon]:text-blue-600"
+                  className="border-none! bg-transparent! [&_.ant-menu-item]:text-stone-600 [&_.ant-menu-item-icon]:text-stone-500 [&_.ant-menu-item-selected_.ant-menu-item-icon]:text-blue-600"
                 />
               </ConfigProvider>
             </div>
@@ -273,6 +230,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             />
           </div>
         </Layout.Sider>
+
         <Layout className="min-h-[calc(100vh-72px)] bg-transparent">
           <Layout.Content className="flex-1 p-6">{children}</Layout.Content>
           <Layout.Footer className="bg-transparent! px-6! py-4!">

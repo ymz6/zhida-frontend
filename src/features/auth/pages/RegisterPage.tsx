@@ -1,3 +1,5 @@
+import { useRegister } from '@/api/generated/endpoints/auth'
+import type { RegisterRequest } from '@/api/generated/models'
 import { useNavigate } from '@tanstack/react-router'
 import { App, Button, Form, Input } from 'antd'
 import { Lock, ShieldCheck, User } from 'lucide-react'
@@ -5,15 +7,16 @@ import { Lock, ShieldCheck, User } from 'lucide-react'
 export function RegisterPage() {
   const navigate = useNavigate()
   const { message } = App.useApp()
-  const [form] = Form.useForm()
+  const [form] = Form.useForm<RegisterRequest>()
+  const registerMutation = useRegister()
 
-  const handleFinish = async (values: any) => {
+  const handleFinish = async (values: RegisterRequest) => {
     try {
-      // TODO 发起注册请求
+      await registerMutation.mutateAsync({ data: values })
       message.success('注册成功，请登录')
       void navigate({ to: '/auth/login' })
-    } catch (e: any) {
-      message.error(`注册失败：${e.message}`)
+    } catch (error: any) {
+      message.error(error.message)
     }
   }
 
@@ -104,6 +107,7 @@ export function RegisterPage() {
           htmlType="submit"
           block
           size="large"
+          loading={registerMutation.isPending}
           className="h-11 rounded-lg font-medium shadow-none"
         >
           注册
