@@ -14,17 +14,20 @@ import { App, ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 // for date-picker i18n
 import 'dayjs/locale/zh-cn'
+import { XProvider } from '@ant-design/x'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <StyleProvider layer>
-      <ConfigProvider locale={zhCN}>
-        <App>
-          <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
-          </QueryClientProvider>
-        </App>
-      </ConfigProvider>
+      <XProvider>
+        <ConfigProvider locale={zhCN}>
+          <App>
+            <QueryClientProvider client={queryClient}>
+              <RouterProvider router={router} />
+            </QueryClientProvider>
+          </App>
+        </ConfigProvider>
+      </XProvider>
     </StyleProvider>
   </StrictMode>,
 )

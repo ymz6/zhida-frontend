@@ -1,2 +1,2 @@
-@layer theme, base, antd, components, utilities;
+@layer theme, base, antd, antdx, components, utilities;
 @import 'tailwindcss';
