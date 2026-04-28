@@ -43,16 +43,19 @@ export function AdminUsersPage() {
   const queryKeyPayload: ListUsersParams = {
     request: search,
   }
-  const usersQuery = useListUsers<PageResultUserInfo | undefined, { message: string }>(queryKeyPayload, {
-    request: {
-      params: search,
+  const usersQuery = useListUsers<PageResultUserInfo | undefined, { message: string }>(
+    queryKeyPayload,
+    {
+      request: {
+        params: search,
+      },
+      query: {
+        placeholderData: keepPreviousData,
+        retry: false,
+        select: (response) => response.data,
+      },
     },
-    query: {
-      placeholderData: keepPreviousData,
-      retry: false,
-      select: (response) => response.data,
-    },
-  })
+  )
   const pageResult = usersQuery.data
   const total = Number(pageResult?.total ?? 0)
 
@@ -126,7 +129,7 @@ export function AdminUsersPage() {
         return (
           <Avatar
             size={36}
-                    src={record.avatar}
+            src={record.avatar}
             className="bg-slate-900!"
           >
             {displayInitial}
