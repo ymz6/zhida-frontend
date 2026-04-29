@@ -1,7 +1,6 @@
 import {
   getGetAppQueryKey,
   getListAppMessagesQueryKey,
-  getListAppsQueryKey,
   listAppMessages,
   type GetAppQueryResult,
   useCreateAppIteration,
@@ -215,7 +214,6 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
         }),
       )
       void queryClient.invalidateQueries({ queryKey: getGetAppQueryKey(appId) })
-      void queryClient.invalidateQueries({ queryKey: getListAppsQueryKey() })
 
       if (!result?.deployUrl) {
         message.warning('部署成功，但后端未返回正式地址')

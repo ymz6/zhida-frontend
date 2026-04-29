@@ -4,15 +4,15 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { ListAppsRequestSortOrder } from './listAppsRequestSortOrder';
+import type { ListMyAppsRequestSortOrder } from './listMyAppsRequestSortOrder';
 
-export interface ListAppsRequest {
+export interface ListMyAppsRequest {
   /** @minimum 1 */
   pageNum?: number;
   /** @minimum 1 */
   pageSize?: number;
   sortField?: string;
-  sortOrder?: ListAppsRequestSortOrder;
+  sortOrder?: ListMyAppsRequestSortOrder;
   keyword?: string;
   status?: string;
   deployStatus?: string;

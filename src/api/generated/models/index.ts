@@ -5,6 +5,7 @@
  * OpenAPI spec version: v0
  */
 
+export * from './appAuthor';
 export * from './appChatMessageInfo';
 export * from './appDetail';
 export * from './appSummary';
@@ -13,9 +14,9 @@ export * from './createAppIterationRequest';
 export * from './createAppRequest';
 export * from './cursorResultAppChatMessageInfo';
 export * from './listAppMessagesRequest';
-export * from './listAppsRequest';
-export * from './listAppsRequestSortOrder';
 export * from './listAppTasksRequest';
+export * from './listMyAppsRequest';
+export * from './listMyAppsRequestSortOrder';
 export * from './listUsersRequest';
 export * from './listUsersRequestSortOrder';
 export * from './loginRequest';

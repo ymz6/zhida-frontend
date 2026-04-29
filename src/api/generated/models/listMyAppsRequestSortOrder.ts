@@ -5,10 +5,10 @@
  * OpenAPI spec version: v0
  */
 
-export type ListAppsRequestSortOrder = typeof ListAppsRequestSortOrder[keyof typeof ListAppsRequestSortOrder];
+export type ListMyAppsRequestSortOrder = typeof ListMyAppsRequestSortOrder[keyof typeof ListMyAppsRequestSortOrder];
 
 
-export const ListAppsRequestSortOrder = {
+export const ListMyAppsRequestSortOrder = {
   ASC: 'ASC',
   DESC: 'DESC',
 } as const;

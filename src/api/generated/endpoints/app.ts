@@ -30,7 +30,7 @@ import type {
   CreateAppRequest,
   ListAppMessagesParams,
   ListAppTasksParams,
-  ListAppsParams,
+  ListMyAppsParams,
   ResponseAppDetail,
   ResponseCreateAppTaskResponse,
   ResponseCursorResultAppChatMessageInfo,
@@ -45,112 +45,6 @@ import { customInstance } from '../../mutator/custom-instance';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-
-
-export const listApps = (
-    params: ListAppsParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-
-
-      return customInstance<ResponsePageResultAppSummary>(
-      {url: `/apps`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getListAppsQueryKey = (params?: ListAppsParams,) => {
-    return [
-    `/apps`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getListAppsQueryOptions = <TData = Awaited<ReturnType<typeof listApps>>, TError = unknown>(params: ListAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApps>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListAppsQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApps>>> = ({ signal }) => listApps(params, requestOptions, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listApps>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListAppsQueryResult = NonNullable<Awaited<ReturnType<typeof listApps>>>
-export type ListAppsQueryError = unknown
-
-
-export function useListApps<TData = Awaited<ReturnType<typeof listApps>>, TError = unknown>(
- params: ListAppsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApps>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listApps>>,
-          TError,
-          Awaited<ReturnType<typeof listApps>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListApps<TData = Awaited<ReturnType<typeof listApps>>, TError = unknown>(
- params: ListAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApps>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listApps>>,
-          TError,
-          Awaited<ReturnType<typeof listApps>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListApps<TData = Awaited<ReturnType<typeof listApps>>, TError = unknown>(
- params: ListAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApps>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useListApps<TData = Awaited<ReturnType<typeof listApps>>, TError = unknown>(
- params: ListAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApps>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListAppsQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-export const invalidateListApps = async (
- queryClient: QueryClient, params: ListAppsParams, options?: InvalidateOptions
-  ): Promise<QueryClient> => {
-
-  await queryClient.invalidateQueries({ queryKey: getListAppsQueryKey(params) }, options);
-
-  return queryClient;
-}
-
-export const useSetListAppsQueryData = () => {
-  const queryClient = useQueryClient();
-  return (params: ListAppsParams,updater: Awaited<ReturnType<typeof listApps>> | undefined | ((old: Awaited<ReturnType<typeof listApps>> | undefined) => Awaited<ReturnType<typeof listApps>> | undefined)) => {
-    queryClient.setQueryData(getListAppsQueryKey(params), updater);
-  };
-}
-
-export const useGetListAppsQueryData = () => {
-  const queryClient = useQueryClient();
-  return (params: ListAppsParams,) =>
-    queryClient.getQueryData<Awaited<ReturnType<typeof listApps>>>(getListAppsQueryKey(params));
-}
 
 
 export const createApp = (
@@ -657,6 +551,112 @@ export const useGetListAppMessagesQueryData = () => {
   return (appId: string,
     params: ListAppMessagesParams,) =>
     queryClient.getQueryData<Awaited<ReturnType<typeof listAppMessages>>>(getListAppMessagesQueryKey(appId,params));
+}
+
+
+export const listMyApps = (
+    params: ListMyAppsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ResponsePageResultAppSummary>(
+      {url: `/apps/mine`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getListMyAppsQueryKey = (params?: ListMyAppsParams,) => {
+    return [
+    `/apps/mine`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListMyAppsQueryOptions = <TData = Awaited<ReturnType<typeof listMyApps>>, TError = unknown>(params: ListMyAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyApps>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyAppsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyApps>>> = ({ signal }) => listMyApps(params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyApps>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMyAppsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyApps>>>
+export type ListMyAppsQueryError = unknown
+
+
+export function useListMyApps<TData = Awaited<ReturnType<typeof listMyApps>>, TError = unknown>(
+ params: ListMyAppsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyApps>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyApps>>,
+          TError,
+          Awaited<ReturnType<typeof listMyApps>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyApps<TData = Awaited<ReturnType<typeof listMyApps>>, TError = unknown>(
+ params: ListMyAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyApps>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyApps>>,
+          TError,
+          Awaited<ReturnType<typeof listMyApps>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyApps<TData = Awaited<ReturnType<typeof listMyApps>>, TError = unknown>(
+ params: ListMyAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyApps>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListMyApps<TData = Awaited<ReturnType<typeof listMyApps>>, TError = unknown>(
+ params: ListMyAppsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyApps>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMyAppsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+export const invalidateListMyApps = async (
+ queryClient: QueryClient, params: ListMyAppsParams, options?: InvalidateOptions
+  ): Promise<QueryClient> => {
+
+  await queryClient.invalidateQueries({ queryKey: getListMyAppsQueryKey(params) }, options);
+
+  return queryClient;
+}
+
+export const useSetListMyAppsQueryData = () => {
+  const queryClient = useQueryClient();
+  return (params: ListMyAppsParams,updater: Awaited<ReturnType<typeof listMyApps>> | undefined | ((old: Awaited<ReturnType<typeof listMyApps>> | undefined) => Awaited<ReturnType<typeof listMyApps>> | undefined)) => {
+    queryClient.setQueryData(getListMyAppsQueryKey(params), updater);
+  };
+}
+
+export const useGetListMyAppsQueryData = () => {
+  const queryClient = useQueryClient();
+  return (params: ListMyAppsParams,) =>
+    queryClient.getQueryData<Awaited<ReturnType<typeof listMyApps>>>(getListMyAppsQueryKey(params));
 }
 
 

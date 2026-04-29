@@ -4,6 +4,7 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
+import type { AppAuthor } from './appAuthor';
 
 export interface AppDetail {
   id?: string;
@@ -15,6 +16,7 @@ export interface AppDetail {
   deployUrl?: string;
   latestTaskId?: string;
   errorMessage?: string;
+  author?: AppAuthor;
   createdAt?: string;
   deployedAt?: string;
   initPrompt?: string;
