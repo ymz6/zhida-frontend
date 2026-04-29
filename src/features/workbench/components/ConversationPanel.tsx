@@ -1,27 +1,15 @@
-import { Bubble, Sender, ThoughtChain } from '@ant-design/x'
-import { Bot, Sparkles, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import type { AppChatMessageInfo } from '@/api/generated/models'
+import { Bubble } from '@ant-design/x'
+import { Empty, Skeleton } from 'antd'
+import { Bot, UserRound } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 
-const generationSteps = [
-  {
-    title: '需求分析',
-    description: '整理应用目标、页面结构与核心功能',
-    status: 'success' as const,
-  },
-  {
-    title: '页面生成',
-    description: '生成首页、数据面板和配置页面',
-    status: 'loading' as const,
-  },
-  {
-    title: '组件更新',
-    description: '等待根据预览反馈继续调整',
-  },
-  {
-    title: '资源处理',
-    description: '等待处理图片、图标与静态资源',
-  },
-]
+import type { RuntimeDetailEvent } from '../types'
+import { buildTaskConversationGroups } from '../utils/conversationTimeline'
+import { AssistantTaskContent } from './AssistantTaskContent'
+import { ConversationComposer } from './ConversationComposer'
+import { TaskProgress } from './TaskProgress'
 
 const roles = {
   user: {
@@ -48,61 +36,222 @@ const roles = {
   },
 }
 
-export function ConversationPanel() {
-  const [prompt, setPrompt] = useState('')
+const TOP_LOAD_THRESHOLD = 80
+const BOTTOM_STICKY_THRESHOLD = 96
+const bubbleListClassNames = {
+  root: '!max-h-none',
+  scroll: '!max-h-none !overflow-visible',
+}
 
-  const items = [
-    {
-      key: '1',
-      role: 'user',
-      content: '创建一个咖啡店会员管理后台，包含订单、积分和活动配置，整体风格要清爽易用。',
-    },
-    {
-      key: '2',
-      role: 'assistant',
-      content:
-        '我会先拆解应用结构，再生成基础页面和可预览版本。当前会优先搭建会员、订单、积分和活动四个核心模块。',
-    },
-    {
-      key: '3',
-      role: 'assistant',
-      content: (
-        <div className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="mb-3 flex items-center gap-2">
-            <Sparkles
-              className="size-4 text-indigo-500"
-              aria-hidden="true"
+function isNearBottom(element: HTMLElement) {
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_STICKY_THRESHOLD
+}
+
+export function ConversationPanel({
+  persistedMessages,
+  streamMessages,
+  runtimeDetails,
+  taskStatus,
+  currentStep,
+  currentTaskId,
+  isStreaming,
+  isLoadingMessages,
+  hasMoreMessages,
+  isLoadingMoreMessages,
+  canIterate,
+  isSubmitting,
+  onLoadMoreMessages,
+  onSubmitIteration,
+}: {
+  persistedMessages: AppChatMessageInfo[]
+  streamMessages: AppChatMessageInfo[]
+  runtimeDetails: RuntimeDetailEvent[]
+  taskStatus?: string
+  currentStep?: string
+  currentTaskId?: string
+  isStreaming?: boolean
+  isLoadingMessages?: boolean
+  hasMoreMessages?: boolean
+  isLoadingMoreMessages?: boolean
+  canIterate?: boolean
+  isSubmitting?: boolean
+  onLoadMoreMessages?: () => Promise<void>
+  onSubmitIteration: (prompt: string) => Promise<void>
+}) {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const restoreScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null)
+  const didInitialScrollRef = useRef(false)
+  const shouldStickToBottomRef = useRef(true)
+  const isRequestingMoreRef = useRef(false)
+
+  const items = useMemo(() => {
+    const groups = buildTaskConversationGroups({
+      persistedMessages,
+      runtimeDetails,
+      streamMessages,
+    })
+    const messageItems: Array<{ key: string; role: string; content: ReactNode }> = []
+
+    groups.forEach((group) => {
+      if (group.userItems.length > 0) {
+        messageItems.push({
+          key: `${group.key}-user`,
+          role: 'user',
+          content: group.userItems.map((item) => item.content).join('\n\n'),
+        })
+      }
+
+      if (group.timelineItems.length > 0 || group.taskId === currentTaskId) {
+        messageItems.push({
+          key: `${group.key}-assistant`,
+          role: 'assistant',
+          content: (
+            <AssistantTaskContent
+              group={group}
+              showProgress={group.taskId === currentTaskId}
+              taskStatus={taskStatus}
+              currentStep={currentStep}
+              isStreaming={isStreaming}
             />
-            <h3 className="text-sm font-semibold text-slate-900">生成过程</h3>
-          </div>
-          <ThoughtChain items={generationSteps} />
-        </div>
-      ),
-    },
-    {
-      key: '4',
-      role: 'assistant',
-      content: '已完成需求分析，正在生成页面框架。右侧应用工作区会承载当前应用的实时运行效果。',
-    },
-  ]
+          ),
+        })
+      }
+    })
+
+    if (messageItems.length === 0 && (taskStatus || currentStep || isStreaming)) {
+      messageItems.push({
+        key: 'task-progress',
+        role: 'assistant',
+        content: (
+          <TaskProgress
+            status={taskStatus}
+            currentStep={currentStep}
+            isStreaming={isStreaming}
+          />
+        ),
+      })
+    }
+
+    return messageItems
+  }, [
+    currentStep,
+    currentTaskId,
+    isStreaming,
+    persistedMessages,
+    runtimeDetails,
+    streamMessages,
+    taskStatus,
+  ])
+
+  const loadMoreMessages = useCallback(async () => {
+    const scrollContainer = scrollContainerRef.current
+
+    if (
+      !scrollContainer ||
+      !hasMoreMessages ||
+      isLoadingMoreMessages ||
+      isRequestingMoreRef.current ||
+      !onLoadMoreMessages
+    ) {
+      return
+    }
+
+    restoreScrollRef.current = {
+      scrollHeight: scrollContainer.scrollHeight,
+      scrollTop: scrollContainer.scrollTop,
+    }
+    isRequestingMoreRef.current = true
+
+    try {
+      await onLoadMoreMessages()
+    } finally {
+      isRequestingMoreRef.current = false
+    }
+  }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages])
+
+  const handleConversationScroll = useCallback(() => {
+    const scrollContainer = scrollContainerRef.current
+
+    if (!scrollContainer) {
+      return
+    }
+
+    shouldStickToBottomRef.current = isNearBottom(scrollContainer)
+
+    if (scrollContainer.scrollTop <= TOP_LOAD_THRESHOLD) {
+      void loadMoreMessages()
+    }
+  }, [loadMoreMessages])
+
+  useLayoutEffect(() => {
+    const scrollContainer = scrollContainerRef.current
+
+    if (!scrollContainer || isLoadingMessages) {
+      return
+    }
+
+    const restoreScroll = restoreScrollRef.current
+
+    if (restoreScroll) {
+      const heightDelta = scrollContainer.scrollHeight - restoreScroll.scrollHeight
+
+      scrollContainer.scrollTop = restoreScroll.scrollTop + heightDelta
+      restoreScrollRef.current = null
+      return
+    }
+
+    if (!didInitialScrollRef.current && items.length > 0) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight
+      didInitialScrollRef.current = true
+      shouldStickToBottomRef.current = true
+      return
+    }
+
+    if (shouldStickToBottomRef.current) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight
+    }
+  }, [
+    isLoadingMessages,
+    items.length,
+    persistedMessages.length,
+    runtimeDetails.length,
+    streamMessages.length,
+  ])
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-white">
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4">
-        <Bubble.List
-          items={items}
-          role={roles}
-        />
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleConversationScroll}
+        className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4"
+      >
+        {isLoadingMessages ? (
+          <Skeleton
+            active
+            avatar
+            paragraph={{ rows: 4 }}
+          />
+        ) : items.length > 0 ? (
+          <Bubble.List
+            autoScroll={false}
+            classNames={bubbleListClassNames}
+            items={items}
+            role={roles}
+          />
+        ) : (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="暂无对话消息"
+            className="pt-20"
+          />
+        )}
       </div>
 
-      <div className="shrink-0 px-4 pb-4">
-        <Sender
-          value={prompt}
-          onChange={(v) => setPrompt(v)}
-          onSubmit={() => setPrompt('')}
-          placeholder="描述越详细，页面越具体，可以一步一步完善生成效果"
-        />
-      </div>
+      <ConversationComposer
+        canIterate={canIterate}
+        isSubmitting={isSubmitting}
+        onSubmitIteration={onSubmitIteration}
+      />
     </section>
   )
 }

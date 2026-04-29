@@ -1,4 +1,6 @@
-import { Button, Card, Input, Skeleton } from 'antd'
+import { useCreateApp } from '@/api/generated/endpoints/app'
+import { useNavigate } from '@tanstack/react-router'
+import { App, Button, Card, Input, Skeleton } from 'antd'
 import { ArrowUp, Compass, Palette, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -70,6 +72,45 @@ function useTypewriterPlaceholder(prompts: readonly string[]) {
 
 export function HomePage() {
   const promptPlaceholder = useTypewriterPlaceholder(typewriterPrompts)
+  const navigate = useNavigate()
+  const { message } = App.useApp()
+  const createAppMutation = useCreateApp()
+  const [prompt, setPrompt] = useState('')
+
+  const handleCreateApp = async () => {
+    const nextPrompt = prompt.trim()
+
+    if (!nextPrompt) {
+      message.warning('请先描述你想生成的应用')
+      return
+    }
+
+    if (nextPrompt.length > 4000) {
+      message.warning('需求描述不能超过 4000 个字符')
+      return
+    }
+
+    try {
+      const response = await createAppMutation.mutateAsync({
+        data: {
+          prompt: nextPrompt,
+        },
+      })
+      const appId = response.data?.appId
+
+      if (!appId) {
+        message.error('后端未返回应用 ID')
+        return
+      }
+
+      void navigate({
+        to: '/workbench/$appId',
+        params: { appId },
+      })
+    } catch (error) {
+      message.error((error as { message?: string })?.message ?? '创建应用失败')
+    }
+  }
 
   return (
     <main className="relative min-h-[calc(100vh-10rem)] overflow-hidden py-10 sm:py-12">
@@ -133,6 +174,8 @@ export function HomePage() {
               variant="borderless"
               autoSize={{ minRows: 2, maxRows: 8 }}
               maxLength={4000}
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
               placeholder={promptPlaceholder}
               className="max-h-56 min-h-18 resize-none rounded-3xl px-2! pt-1! text-base! leading-7! text-slate-800! placeholder:text-slate-400!"
             />
@@ -142,6 +185,9 @@ export function HomePage() {
                 htmlType="button"
                 type="primary"
                 shape="circle"
+                loading={createAppMutation.isPending}
+                disabled={createAppMutation.isPending}
+                onClick={() => void handleCreateApp()}
                 aria-label="生成应用"
                 icon={
                   <ArrowUp

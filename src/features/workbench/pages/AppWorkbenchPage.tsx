@@ -1,63 +1,378 @@
-import zhidaLogo from '@/assets/zhida-logo.svg'
-import { Link } from '@tanstack/react-router'
-import { Layout, Splitter } from 'antd'
-import { Download, Rocket } from 'lucide-react'
+import {
+  getGetAppQueryKey,
+  getListAppMessagesQueryKey,
+  getListAppsQueryKey,
+  listAppMessages,
+  type GetAppQueryResult,
+  useCreateAppIteration,
+  useDeployApp,
+  useGetApp,
+} from '@/api/generated/endpoints/app'
+import { useGetTask } from '@/api/generated/endpoints/app-task'
+import type { AppChatMessageInfo } from '@/api/generated/models'
+import { queryClient } from '@/libs/query-client'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { App, Alert, Layout, Skeleton, Splitter } from 'antd'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { AppWorkbenchHeader } from '../components/AppWorkbenchHeader'
 import { AppWorkspacePanel } from '../components/AppWorkspacePanel'
 import { ConversationPanel } from '../components/ConversationPanel'
+import { DeploymentInfoCard } from '../components/DeploymentInfoCard'
+import { useTaskStream } from '../hooks/useTaskStream'
+import { isActiveAppStatus, isActiveTaskStatus, isTerminalTaskStatus } from '../types'
+import { updateAppDetailDeployResult } from '../utils/deploy'
 
-export function AppWorkbenchPage() {
+const CHAT_MESSAGES_LIMIT = 50
+
+export function AppWorkbenchPage({ appId }: { appId: string }) {
+  const { message, modal } = App.useApp()
+  const [pendingTaskId, setPendingTaskId] = useState<string>()
+  const appQuery = useGetApp(appId)
+
+  const messagesQueryKey = useMemo(
+    () => [...getListAppMessagesQueryKey(appId), 'cursor', { limit: CHAT_MESSAGES_LIMIT }] as const,
+    [appId],
+  )
+  const messagesQuery = useInfiniteQuery({
+    queryKey: messagesQueryKey,
+    initialPageParam: '',
+    queryFn: ({ pageParam, signal }) =>
+      listAppMessages(
+        appId,
+        {
+          request: {
+            limit: CHAT_MESSAGES_LIMIT,
+          },
+        },
+        {
+          params: {
+            limit: CHAT_MESSAGES_LIMIT,
+            before: pageParam || undefined,
+          },
+        },
+        signal,
+      ),
+    getNextPageParam: (lastPage, _allPages, lastPageParam, allPageParams) => {
+      const nextCursor = lastPage.data?.nextCursor
+
+      if (
+        !lastPage.data?.hasMore ||
+        !nextCursor ||
+        nextCursor === lastPageParam ||
+        allPageParams.includes(nextCursor)
+      ) {
+        return undefined
+      }
+
+      return nextCursor
+    },
+  })
+  const createIterationMutation = useCreateAppIteration()
+  const deployMutation = useDeployApp()
+  const appDetail = appQuery.data?.data
+  const currentTaskId = pendingTaskId ?? appDetail?.latestTaskId
+  const hasLocalPendingTask = Boolean(pendingTaskId)
+  const shouldTrackTask = Boolean(
+    currentTaskId && (hasLocalPendingTask || isActiveAppStatus(appDetail?.status)),
+  )
+  const currentTaskQuery = useGetTask(currentTaskId ?? '', {
+    query: {
+      enabled: shouldTrackTask,
+    },
+  })
+  const currentTask = currentTaskQuery.data?.data
+
+  const handleStreamError = useCallback(
+    (errorMessage: string) => {
+      message.error(errorMessage)
+    },
+    [message],
+  )
+
+  const taskStream = useTaskStream({
+    appId,
+    taskId: currentTaskId,
+    initialTaskStatus:
+      currentTask?.status ??
+      (hasLocalPendingTask || isActiveAppStatus(appDetail?.status) ? 'PENDING' : undefined),
+    enabled: Boolean(
+      shouldTrackTask &&
+      (hasLocalPendingTask || !currentTaskQuery.isLoading) &&
+      !isTerminalTaskStatus(currentTask?.status),
+    ),
+    onError: handleStreamError,
+  })
+
+  const persistedMessages = useMemo(
+    () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.data?.list ?? []),
+    [messagesQuery.data?.pages],
+  )
+
+  const streamMessages = useMemo<AppChatMessageInfo[]>(
+    () =>
+      taskStream.streamMessages.map((streamMessage) => ({
+        id: streamMessage.messageId ?? streamMessage.key,
+        appId: streamMessage.appId,
+        taskId: streamMessage.taskId,
+        role: streamMessage.role,
+        messageType: streamMessage.messageType,
+        content: streamMessage.content,
+        metadata: streamMessage.metadata,
+        createdAt: streamMessage.createdAt,
+      })),
+    [taskStream.streamMessages],
+  )
+
+  const effectiveTaskStatus = taskStream.status ?? currentTask?.status
+  const effectiveTaskStep = taskStream.currentStep ?? currentTask?.currentStep
+  const isTaskRunning =
+    isActiveTaskStatus(effectiveTaskStatus) || isActiveAppStatus(appDetail?.status)
+  const canIterate = Boolean(
+    appDetail?.id &&
+    !isTaskRunning &&
+    (appDetail.status === 'READY' || appDetail.status === 'FAILED'),
+  )
+  const isDeploying = deployMutation.isPending || appDetail?.deployStatus === 'DEPLOYING'
+  const canDeploy = Boolean(
+    appDetail?.id && appDetail.status === 'READY' && !isTaskRunning && !isDeploying,
+  )
+  const deployBlockedReason = (() => {
+    if (isDeploying) {
+      return '项目正在部署，请稍候'
+    }
+
+    if (!appDetail?.id) {
+      return '应用加载完成后才能部署'
+    }
+
+    if (isTaskRunning) {
+      return '当前任务完成后才能部署'
+    }
+
+    if (appDetail.status !== 'READY') {
+      return '应用生成成功后才能部署'
+    }
+
+    return undefined
+  })()
+  const effectiveDeployStatus = deployMutation.isPending ? 'DEPLOYING' : appDetail?.deployStatus
+  const hasDeployUrl = Boolean(appDetail?.deployUrl)
+
+  const handleLoadMoreMessages = useCallback(async () => {
+    if (!messagesQuery.hasNextPage || messagesQuery.isFetchingNextPage) {
+      return
+    }
+
+    await messagesQuery.fetchNextPage()
+  }, [messagesQuery.fetchNextPage, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage])
+
+  const handleSubmitIteration = async (prompt: string) => {
+    if (!canIterate) {
+      message.warning('当前任务完成后才能继续迭代')
+      return
+    }
+
+    if (prompt.length > 4000) {
+      message.warning('需求描述不能超过 4000 个字符')
+      return
+    }
+
+    try {
+      const response = await createIterationMutation.mutateAsync({
+        appId,
+        data: { prompt },
+      })
+      const nextTaskId = response.data?.taskId
+
+      if (!nextTaskId) {
+        message.error('后端未返回任务 ID')
+        return
+      }
+
+      void queryClient.invalidateQueries({ queryKey: getListAppMessagesQueryKey(appId) })
+      setPendingTaskId(nextTaskId)
+    } catch (error) {
+      message.error((error as { message?: string })?.message ?? '创建迭代任务失败')
+    }
+  }
+
+  const handleDeploy = useCallback(async () => {
+    if (!canDeploy) {
+      message.warning(deployBlockedReason ?? '当前状态不能部署')
+      return
+    }
+
+    try {
+      const response = await deployMutation.mutateAsync({ appId })
+      const result = response.data
+
+      queryClient.setQueryData<GetAppQueryResult>(getGetAppQueryKey(appId), (oldData) =>
+        updateAppDetailDeployResult(oldData, {
+          deployStatus: result?.deployStatus,
+          deployUrl: result?.deployUrl,
+          deployedAt: result?.deployedAt,
+        }),
+      )
+      void queryClient.invalidateQueries({ queryKey: getGetAppQueryKey(appId) })
+      void queryClient.invalidateQueries({ queryKey: getListAppsQueryKey() })
+
+      if (!result?.deployUrl) {
+        message.warning('部署成功，但后端未返回正式地址')
+        return
+      }
+
+      message.success('部署成功')
+    } catch (error) {
+      void queryClient.invalidateQueries({ queryKey: getGetAppQueryKey(appId) })
+      message.error((error as { message?: string })?.message ?? '部署项目失败')
+    }
+  }, [appId, canDeploy, deployBlockedReason, deployMutation, message])
+
+  const handleConfirmDeploy = useCallback(() => {
+    if (!canDeploy) {
+      message.warning(deployBlockedReason ?? '当前状态不能部署')
+      return
+    }
+
+    const isRedeploy = Boolean(appDetail?.deployUrl)
+
+    modal.confirm({
+      title: isRedeploy ? '重新部署项目？' : '部署项目？',
+      content: isRedeploy
+        ? '将使用当前预览版本更新正式访问地址，线上内容会被覆盖。'
+        : '部署成功后会生成正式访问地址，方便对外分享和访问。',
+      okText: isRedeploy ? '确认重新部署' : '确认部署',
+      cancelText: '取消',
+      centered: true,
+      onOk: handleDeploy,
+    })
+  }, [appDetail?.deployUrl, canDeploy, deployBlockedReason, handleDeploy, message, modal])
+
+  const handleCopyDeployUrl = useCallback(
+    async (url: string | undefined) => {
+      if (!url) {
+        return
+      }
+
+      try {
+        await navigator.clipboard.writeText(url)
+        message.success('正式地址已复制')
+      } catch {
+        message.error('复制失败，请手动复制链接')
+      }
+    },
+    [message],
+  )
+
+  const deployInfoPopoverContent = useMemo(() => {
+    if (!hasDeployUrl) {
+      return
+    }
+
+    return (
+      <DeploymentInfoCard
+        deployUrl={appDetail?.deployUrl}
+        deployStatus={effectiveDeployStatus}
+        deployedAt={appDetail?.deployedAt}
+        blockedReason={deployBlockedReason}
+        onCopy={(url) => void handleCopyDeployUrl(url)}
+      />
+    )
+  }, [
+    appDetail?.deployUrl,
+    appDetail?.deployedAt,
+    deployBlockedReason,
+    effectiveDeployStatus,
+    handleCopyDeployUrl,
+    hasDeployUrl,
+  ])
+
+  useEffect(() => {
+    if (pendingTaskId && isTerminalTaskStatus(effectiveTaskStatus)) {
+      setPendingTaskId(undefined)
+    }
+  }, [effectiveTaskStatus, pendingTaskId])
+
   return (
     <Layout className="fixed inset-0 z-0 flex overflow-hidden bg-slate-100 text-slate-950">
-      <Layout.Header className="flex h-14! shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-slate-200 bg-white px-4! leading-normal! sm:px-5!">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link
-            to="/"
-            className="flex size-9 shrink-0 hover:opacity-80 transition-opacity"
-            title="返回首页"
-          >
-            <img
-              src={zhidaLogo}
-              alt="智搭 Logo"
-              className="h-full! w-full! max-w-full! object-contain"
+      <AppWorkbenchHeader
+        appName={appDetail?.name}
+        appStatus={appDetail?.status}
+        deployStatus={effectiveDeployStatus}
+        deployBlockedReason={deployBlockedReason}
+        isTaskRunning={isTaskRunning}
+        isDeployPending={deployMutation.isPending}
+        canDeploy={canDeploy}
+        hasDeployUrl={hasDeployUrl}
+        deployInfoPopoverContent={deployInfoPopoverContent}
+        onConfirmDeploy={handleConfirmDeploy}
+      />
+
+      <Layout.Content className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+        {appQuery.isLoading ? (
+          <div className="p-6">
+            <Skeleton
+              active
+              paragraph={{ rows: 8 }}
             />
-          </Link>
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold leading-5 text-slate-950">应用名称</h1>
           </div>
-        </div>
+        ) : appQuery.isError ? (
+          <div className="p-6">
+            <Alert
+              showIcon
+              type="error"
+              title="应用加载失败"
+              description={(appQuery.error as { message?: string })?.message ?? '请稍后重试'}
+            />
+          </div>
+        ) : (
+          <>
+            {appDetail?.deployErrorMessage && (
+              <Alert
+                showIcon
+                type="error"
+                title="最近一次部署失败"
+                description={appDetail.deployErrorMessage}
+                className="shrink-0 rounded-none! border-x-0! border-t-0!"
+              />
+            )}
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="flex h-8 items-center gap-1.5 rounded-md bg-white px-3 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <Download className="size-4" />
-            <span>下载代码</span>
-          </button>
-          <button
-            type="button"
-            className="flex h-8 items-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
-          >
-            <Rocket className="size-4" />
-            <span>部署项目</span>
-          </button>
-        </div>
-      </Layout.Header>
-
-      <Layout.Content className="min-h-0 flex-1 overflow-hidden bg-white">
-        <Splitter className="h-full w-full overflow-hidden bg-white">
-          <Splitter.Panel
-            defaultSize="380px"
-            min="320px"
-            max="48%"
-          >
-            <ConversationPanel />
-          </Splitter.Panel>
-          <Splitter.Panel min="420px">
-            <AppWorkspacePanel />
-          </Splitter.Panel>
-        </Splitter>
+            <Splitter className="h-full min-h-0 flex-1 overflow-hidden bg-white">
+              <Splitter.Panel
+                defaultSize="380px"
+                min="320px"
+                max="48%"
+              >
+                <ConversationPanel
+                  key={appId}
+                  persistedMessages={persistedMessages}
+                  streamMessages={streamMessages}
+                  runtimeDetails={taskStream.runtimeDetails}
+                  taskStatus={effectiveTaskStatus}
+                  currentStep={effectiveTaskStep}
+                  currentTaskId={isTaskRunning ? currentTaskId : undefined}
+                  isStreaming={taskStream.isStreaming}
+                  isLoadingMessages={messagesQuery.isLoading}
+                  hasMoreMessages={messagesQuery.hasNextPage}
+                  isLoadingMoreMessages={messagesQuery.isFetchingNextPage}
+                  canIterate={canIterate}
+                  isSubmitting={createIterationMutation.isPending}
+                  onLoadMoreMessages={handleLoadMoreMessages}
+                  onSubmitIteration={handleSubmitIteration}
+                />
+              </Splitter.Panel>
+              <Splitter.Panel min="420px">
+                <AppWorkspacePanel
+                  key={appId}
+                  previewUrl={appDetail?.previewUrl}
+                  isGenerating={isTaskRunning}
+                  errorMessage={appDetail?.errorMessage}
+                />
+              </Splitter.Panel>
+            </Splitter>
+          </>
+        )}
       </Layout.Content>
     </Layout>
   )

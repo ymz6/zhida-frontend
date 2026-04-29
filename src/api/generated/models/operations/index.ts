@@ -6,6 +6,15 @@
  */
 
 export * from './changeAvatarBody';
+export * from './createAppTaskResponse';
+export * from './deployAppResponse';
+export * from './listAppMessagesParams';
+export * from './listAppsParams';
+export * from './listAppTasksParams';
 export * from './listUsersParams';
 export * from './loginResponse';
+export * from './responseCreateAppTaskResponse';
+export * from './responseDeployAppResponse';
 export * from './responseLoginResponse';
+export * from './responseTaskStatusResponse';
+export * from './taskStatusResponse';

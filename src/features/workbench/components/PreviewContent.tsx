@@ -1,46 +1,98 @@
-import { AppWindow, ExternalLink, RotateCw } from 'lucide-react'
+import { useRef, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 
-export function PreviewContent() {
+import { usePreviewDockDrag } from '../hooks/usePreviewDockDrag'
+import { DEFAULT_PREVIEW_DOCK_STATE, type PreviewDockState } from '../utils/previewDock'
+import { PreviewActionDock } from './PreviewActionDock'
+import { PreviewEmptyState } from './PreviewEmptyState'
+
+export { DEFAULT_PREVIEW_DOCK_STATE, type PreviewDockState }
+
+export function PreviewContent({
+  previewUrl,
+  isGenerating,
+  errorMessage,
+  previewDockState,
+  onPreviewDockStateChange,
+}: {
+  previewUrl?: string
+  isGenerating?: boolean
+  errorMessage?: string
+  previewDockState: PreviewDockState
+  onPreviewDockStateChange: Dispatch<SetStateAction<PreviewDockState>>
+}) {
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+  const dockRef = useRef<HTMLDivElement>(null)
+  const [previewVersion, setPreviewVersion] = useState(0)
+  const iframeSrc = previewUrl
+    ? `${previewUrl}${previewUrl.includes('?') ? '&' : '?'}_v=${previewVersion}`
+    : 'about:blank'
+  const { isDraggingDock, handleDockPointerDown, handleDockPointerMove, handleDockPointerEnd } =
+    usePreviewDockDrag({
+      dockRef,
+      previewContainerRef,
+      previewDockState,
+      onPreviewDockStateChange,
+    })
+
+  const handleOpenPreview = () => {
+    if (previewUrl) {
+      window.open(previewUrl, '_blank', 'noreferrer')
+    }
+  }
+
+  const handleDockCollapse = () => {
+    onPreviewDockStateChange((state) => ({
+      ...state,
+      isExpanded: false,
+    }))
+  }
+
+  const handleDockExpand = () => {
+    onPreviewDockStateChange((state) => ({
+      ...state,
+      isExpanded: true,
+    }))
+  }
+
   return (
-    <div className="relative flex h-full min-h-0 flex-1 flex-col bg-white">
-      {/* 右上角悬浮操作按钮 */}
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          title="刷新"
-        >
-          <RotateCw className="size-4" />
-          <span>刷新</span>
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          title="在新窗口打开"
-        >
-          <ExternalLink className="size-4" />
-          <span>新窗口打开</span>
-        </button>
-      </div>
+    <div
+      ref={previewContainerRef}
+      className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white"
+    >
+      <PreviewActionDock
+        dockRef={dockRef}
+        isDragging={isDraggingDock}
+        isExpanded={previewDockState.isExpanded}
+        offsetY={previewDockState.offsetY}
+        previewUrl={previewUrl}
+        onCollapse={handleDockCollapse}
+        onExpand={handleDockExpand}
+        onOpenPreview={handleOpenPreview}
+        onRefresh={() => setPreviewVersion((version) => version + 1)}
+        onDragPointerDown={handleDockPointerDown}
+        onDragPointerMove={handleDockPointerMove}
+        onDragPointerEnd={handleDockPointerEnd}
+      />
 
-      {/* iframe内容区 */}
-      <div className="relative flex-1 min-h-0">
+      <div className="relative min-h-0 flex-1">
         <iframe
           title="当前应用预览"
-          src="about:blank"
+          src={iframeSrc}
           className="h-full w-full border-0 bg-transparent"
         />
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white backdrop-blur-sm">
-          <div className="flex max-w-sm flex-col items-center text-center">
-            <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
-              <AppWindow className="size-6 text-indigo-500" />
-            </div>
-            <p className="text-base font-semibold text-slate-900">等待加载预览</p>
-            <p className="mt-2 text-sm text-slate-500">
-              应用生成后，这里将实时展示运行效果和交互反馈。
-            </p>
-          </div>
-        </div>
+        {isDraggingDock && (
+          <div
+            className="absolute inset-0 z-9 cursor-grabbing"
+            aria-hidden="true"
+          />
+        )}
+        {!previewUrl && (
+          <PreviewEmptyState
+            errorMessage={errorMessage}
+            isGenerating={isGenerating}
+          />
+        )}
       </div>
     </div>
   )
