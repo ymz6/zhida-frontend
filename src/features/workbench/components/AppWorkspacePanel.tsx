@@ -8,10 +8,12 @@ import { SettingsContent } from './SettingsContent'
 
 export function AppWorkspacePanel({
   previewUrl,
+  previewReloadKey,
   isGenerating,
   errorMessage,
 }: {
   previewUrl?: string
+  previewReloadKey?: number
   isGenerating?: boolean
   errorMessage?: string
 }) {
@@ -31,6 +33,7 @@ export function AppWorkspacePanel({
         {activeWorkspaceTab === 'preview' && (
           <PreviewContent
             previewUrl={previewUrl}
+            previewReloadKey={previewReloadKey}
             isGenerating={isGenerating}
             errorMessage={errorMessage}
             previewDockState={previewDockState}

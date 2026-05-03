@@ -12,7 +12,7 @@ import type { AppChatMessageInfo } from '@/api/generated/models'
 import { queryClient } from '@/libs/query-client'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { App, Alert, Layout, Skeleton, Splitter } from 'antd'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { AppWorkbenchHeader } from '../components/AppWorkbenchHeader'
 import { AppWorkspacePanel } from '../components/AppWorkspacePanel'
@@ -27,6 +27,8 @@ const CHAT_MESSAGES_LIMIT = 50
 export function AppWorkbenchPage({ appId }: { appId: string }) {
   const { message, modal } = App.useApp()
   const [pendingTaskId, setPendingTaskId] = useState<string>()
+  const [previewReloadKey, setPreviewReloadKey] = useState(0)
+  const activePreviewTaskIdsRef = useRef(new Set<string>())
   const appQuery = useGetApp(appId)
 
   const messagesQueryKey = useMemo(
@@ -80,7 +82,8 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
       enabled: shouldTrackTask,
     },
   })
-  const currentTask = currentTaskQuery.data?.data
+  const taskDetail = currentTaskQuery.data?.data
+  const currentTask = currentTaskId && taskDetail?.id === currentTaskId ? taskDetail : undefined
 
   const handleStreamError = useCallback(
     (errorMessage: string) => {
@@ -287,10 +290,35 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
   ])
 
   useEffect(() => {
-    if (pendingTaskId && isTerminalTaskStatus(effectiveTaskStatus)) {
+    if (!currentTaskId) {
+      return
+    }
+
+    if (isActiveTaskStatus(effectiveTaskStatus) || taskStream.isStreaming) {
+      activePreviewTaskIdsRef.current.add(currentTaskId)
+      return
+    }
+
+    if (!isTerminalTaskStatus(effectiveTaskStatus)) {
+      return
+    }
+
+    const wasActive = activePreviewTaskIdsRef.current.delete(currentTaskId)
+
+    if (wasActive && effectiveTaskStatus === 'SUCCESS') {
+      setPreviewReloadKey((key) => key + 1)
+    }
+  }, [currentTaskId, effectiveTaskStatus, taskStream.isStreaming])
+
+  useEffect(() => {
+    if (
+      pendingTaskId &&
+      currentTaskId === pendingTaskId &&
+      isTerminalTaskStatus(effectiveTaskStatus)
+    ) {
       setPendingTaskId(undefined)
     }
-  }, [effectiveTaskStatus, pendingTaskId])
+  }, [currentTaskId, effectiveTaskStatus, pendingTaskId])
 
   return (
     <Layout className="fixed inset-0 z-0 flex overflow-hidden bg-slate-100 text-slate-950">
@@ -364,6 +392,7 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
                 <AppWorkspacePanel
                   key={appId}
                   previewUrl={appDetail?.previewUrl}
+                  previewReloadKey={previewReloadKey}
                   isGenerating={isTaskRunning}
                   errorMessage={appDetail?.errorMessage}
                 />

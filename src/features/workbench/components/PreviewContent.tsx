@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 
 import { usePreviewDockDrag } from '../hooks/usePreviewDockDrag'
@@ -10,12 +10,14 @@ export { DEFAULT_PREVIEW_DOCK_STATE, type PreviewDockState }
 
 export function PreviewContent({
   previewUrl,
+  previewReloadKey,
   isGenerating,
   errorMessage,
   previewDockState,
   onPreviewDockStateChange,
 }: {
   previewUrl?: string
+  previewReloadKey?: number
   isGenerating?: boolean
   errorMessage?: string
   previewDockState: PreviewDockState
@@ -23,7 +25,8 @@ export function PreviewContent({
 }) {
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const dockRef = useRef<HTMLDivElement>(null)
-  const [previewVersion, setPreviewVersion] = useState(0)
+  const previousPreviewReloadKeyRef = useRef(previewReloadKey)
+  const [previewVersion, setPreviewVersion] = useState(previewReloadKey ?? 0)
   const iframeSrc = previewUrl
     ? `${previewUrl}${previewUrl.includes('?') ? '&' : '?'}_v=${previewVersion}`
     : 'about:blank'
@@ -34,6 +37,18 @@ export function PreviewContent({
       previewDockState,
       onPreviewDockStateChange,
     })
+
+  useEffect(() => {
+    if (previousPreviewReloadKeyRef.current === previewReloadKey) {
+      return
+    }
+
+    previousPreviewReloadKeyRef.current = previewReloadKey
+
+    if (previewUrl) {
+      setPreviewVersion((version) => version + 1)
+    }
+  }, [previewReloadKey, previewUrl])
 
   const handleOpenPreview = () => {
     if (previewUrl) {

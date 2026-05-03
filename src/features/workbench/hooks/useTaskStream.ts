@@ -1,4 +1,4 @@
-import { startTask } from '@/api/generated/endpoints/app-task'
+import { getGetTaskQueryKey, startTask } from '@/api/generated/endpoints/app-task'
 import {
   getGetAppQueryKey,
   getListAppMessagesQueryKey,
@@ -30,6 +30,12 @@ interface StreamMessage {
   content: string
   metadata?: string
   createdAt?: string
+}
+
+interface TaskStreamState {
+  taskId?: string
+  status?: string
+  currentStep?: string
 }
 
 function getEventPayload(rawData: string): TaskStreamEvent | null {
@@ -68,26 +74,45 @@ export function useTaskStream({
   onError,
 }: UseTaskStreamOptions) {
   const accessToken = useAuthSessionStore((state) => state.accessToken)
-  const [status, setStatus] = useState<string | undefined>(initialTaskStatus)
-  const [currentStep, setCurrentStep] = useState<string | undefined>()
+  const [taskState, setTaskState] = useState<TaskStreamState>({
+    taskId,
+    status: initialTaskStatus,
+  })
   const [streamMessages, setStreamMessages] = useState<StreamMessage[]>([])
   const [runtimeDetails, setRuntimeDetails] = useState<RuntimeDetailEvent[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const startedTaskIdsRef = useRef(new Set<string>())
   const messageKeysRef = useRef(new Set<string>())
+  const activeTaskIdRef = useRef(taskId)
+
+  activeTaskIdRef.current = taskId
 
   useEffect(() => {
-    setStatus(initialTaskStatus)
+    setTaskState((prev) => {
+      if (prev.taskId === taskId) {
+        return {
+          ...prev,
+          status: initialTaskStatus ?? prev.status,
+        }
+      }
+
+      return {
+        taskId,
+        status: initialTaskStatus,
+      }
+    })
   }, [initialTaskStatus, taskId])
 
   useEffect(() => {
     setStreamMessages([])
     setRuntimeDetails([])
-    setCurrentStep(undefined)
     setIsConnected(false)
     messageKeysRef.current.clear()
   }, [taskId])
+
+  const status = taskState.taskId === taskId ? taskState.status : initialTaskStatus
+  const currentStep = taskState.taskId === taskId ? taskState.currentStep : undefined
 
   useEffect(() => {
     if (!enabled || !taskId || isTerminalTaskStatus(initialTaskStatus)) {
@@ -102,9 +127,27 @@ export function useTaskStream({
       void queryClient.invalidateQueries({ queryKey: getGetAppQueryKey(appId) })
       void queryClient.invalidateQueries({ queryKey: getListAppMessagesQueryKey(appId) })
       void queryClient.invalidateQueries({ queryKey: getListAppTasksQueryKey(appId) })
+      void queryClient.invalidateQueries({ queryKey: getGetTaskQueryKey(taskId) })
+    }
+
+    const mergeTaskState = (nextState: Omit<TaskStreamState, 'taskId'>) => {
+      if (controller.signal.aborted || activeTaskIdRef.current !== taskId) {
+        return
+      }
+
+      setTaskState((prev) => ({
+        taskId,
+        status: nextState.status ?? (prev.taskId === taskId ? prev.status : initialTaskStatus),
+        currentStep:
+          nextState.currentStep ?? (prev.taskId === taskId ? prev.currentStep : undefined),
+      }))
     }
 
     const startPendingTask = async () => {
+      if (controller.signal.aborted || activeTaskIdRef.current !== taskId) {
+        return
+      }
+
       if (startedTaskIdsRef.current.has(taskId)) {
         return
       }
@@ -112,20 +155,20 @@ export function useTaskStream({
       startedTaskIdsRef.current.add(taskId)
 
       try {
-        const response = await startTask(taskId)
+        const response = await startTask(taskId, undefined, controller.signal)
         const nextStatus = response.data?.status
         const nextStep = response.data?.currentStep
 
-        if (nextStatus) {
-          setStatus(nextStatus)
-        }
-
-        if (nextStep) {
-          setCurrentStep(nextStep)
-        }
+        mergeTaskState({
+          status: nextStatus,
+          currentStep: nextStep,
+        })
       } catch (error) {
         startedTaskIdsRef.current.delete(taskId)
-        onError?.((error as { message?: string })?.message ?? '任务启动失败')
+
+        if (!controller.signal.aborted && activeTaskIdRef.current === taskId) {
+          onError?.((error as { message?: string })?.message ?? '任务启动失败')
+        }
       }
     }
 
@@ -144,6 +187,10 @@ export function useTaskStream({
           throw new Error(`SSE 连接失败：${response.status}`)
         }
 
+        if (controller.signal.aborted || activeTaskIdRef.current !== taskId) {
+          return
+        }
+
         setIsConnected(true)
 
         if (initialTaskStatus === 'PENDING') {
@@ -151,25 +198,31 @@ export function useTaskStream({
         }
       },
       onmessage(message) {
+        if (controller.signal.aborted || activeTaskIdRef.current !== taskId) {
+          return
+        }
+
         const payload = getEventPayload(message.data)
 
         if (!payload) {
           return
         }
 
+        if (payload.taskId && payload.taskId !== taskId) {
+          return
+        }
+
         const eventType = message.event || payload.eventType
         const event = {
           ...payload,
+          taskId: payload.taskId ?? taskId,
           eventType,
         }
 
-        if (event.status) {
-          setStatus(event.status)
-        }
-
-        if (event.currentStep) {
-          setCurrentStep(event.currentStep)
-        }
+        mergeTaskState({
+          status: event.status,
+          currentStep: event.currentStep,
+        })
 
         if (eventType === 'message') {
           const key = getStreamMessageKey(event)
@@ -208,19 +261,24 @@ export function useTaskStream({
         }
       },
       onclose() {
-        setIsStreaming(false)
-        setIsConnected(false)
+        if (activeTaskIdRef.current === taskId) {
+          setIsStreaming(false)
+          setIsConnected(false)
+        }
       },
       onerror(error) {
-        if (!isClosed) {
+        if (!isClosed && !controller.signal.aborted && activeTaskIdRef.current === taskId) {
           onError?.((error as { message?: string })?.message ?? '任务流连接异常')
         }
 
-        setIsStreaming(false)
+        if (activeTaskIdRef.current === taskId) {
+          setIsStreaming(false)
+        }
+
         throw error
       },
     }).catch((error) => {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && activeTaskIdRef.current === taskId) {
         onError?.((error as { message?: string })?.message ?? '任务流连接异常')
       }
     })
