@@ -5,7 +5,15 @@ import { useAuthSessionStore } from '@/stores/auth-session'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { App, Avatar, Button, ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd'
 import type { MenuProps } from 'antd'
-import { ChevronDown, ChevronLeft, ChevronRight, Globe, House, LogOut, Users } from 'lucide-react'
+import {
+  Activity,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  LogOut,
+  Users,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
@@ -14,8 +22,8 @@ const { Link: TypographyLink, Text } = Typography
 const adminMenuItems = [
   {
     key: '/admin',
-    label: '控制台',
-    icon: <House className="size-4" />,
+    label: '运行监控',
+    icon: <Activity className="size-4" />,
   },
   {
     key: '/admin/users',
