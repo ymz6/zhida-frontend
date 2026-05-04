@@ -9,6 +9,7 @@ import {
 } from '@/api/generated/endpoints/app'
 import { useGetTask } from '@/api/generated/endpoints/app-task'
 import type { AppChatMessageInfo } from '@/api/generated/models'
+import { SubmitCaseModal } from '@/features/app-case/components/SubmitCaseModal'
 import { queryClient } from '@/libs/query-client'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { App, Alert, Layout, Skeleton, Splitter } from 'antd'
@@ -28,6 +29,7 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
   const { message, modal } = App.useApp()
   const [pendingTaskId, setPendingTaskId] = useState<string>()
   const [previewReloadKey, setPreviewReloadKey] = useState(0)
+  const [isSubmitCaseModalOpen, setIsSubmitCaseModalOpen] = useState(false)
   const activePreviewTaskIdsRef = useRef(new Set<string>())
   const appQuery = useGetApp(appId)
 
@@ -160,6 +162,12 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
   })()
   const effectiveDeployStatus = deployMutation.isPending ? 'DEPLOYING' : appDetail?.deployStatus
   const hasDeployUrl = Boolean(appDetail?.deployUrl)
+  const canSubmitCase = Boolean(
+    appDetail?.id &&
+    appDetail.status === 'READY' &&
+    effectiveDeployStatus === 'DEPLOYED' &&
+    appDetail.deployUrl,
+  )
 
   const handleLoadMoreMessages = useCallback(async () => {
     if (!messagesQuery.hasNextPage || messagesQuery.isFetchingNextPage) {
@@ -331,7 +339,9 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
         isDeployPending={deployMutation.isPending}
         canDeploy={canDeploy}
         hasDeployUrl={hasDeployUrl}
+        canSubmitCase={canSubmitCase}
         deployInfoPopoverContent={deployInfoPopoverContent}
+        onOpenSubmitCase={() => setIsSubmitCaseModalOpen(true)}
         onConfirmDeploy={handleConfirmDeploy}
       />
 
@@ -401,6 +411,15 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
           </>
         )}
       </Layout.Content>
+
+      <SubmitCaseModal
+        open={isSubmitCaseModalOpen}
+        appId={appDetail?.id}
+        initialTitle={appDetail?.name}
+        initialSummary={appDetail?.initPrompt}
+        onCancel={() => setIsSubmitCaseModalOpen(false)}
+        onSuccess={() => setIsSubmitCaseModalOpen(false)}
+      />
     </Layout>
   )
 }

@@ -1,7 +1,7 @@
 import zhidaLogo from '@/assets/zhida-logo.svg'
 import { Link } from '@tanstack/react-router'
 import { Button, Layout, Popover, Tag, Tooltip } from 'antd'
-import { Download, Rocket } from 'lucide-react'
+import { Download, Rocket, Send } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { getAppStatusLabel, getDeployStatusColor, getDeployStatusLabel } from '../utils/status'
@@ -17,7 +17,9 @@ export function AppWorkbenchHeader({
   isDeployPending,
   canDeploy,
   hasDeployUrl,
+  canSubmitCase,
   deployInfoPopoverContent,
+  onOpenSubmitCase,
   onConfirmDeploy,
 }: {
   appName?: string
@@ -28,7 +30,9 @@ export function AppWorkbenchHeader({
   isDeployPending?: boolean
   canDeploy?: boolean
   hasDeployUrl?: boolean
+  canSubmitCase?: boolean
   deployInfoPopoverContent?: ReactNode
+  onOpenSubmitCase?: () => void
   onConfirmDeploy: () => void
 }) {
   return (
@@ -81,6 +85,22 @@ export function AppWorkbenchHeader({
         >
           下载代码
         </Button>
+
+        {canSubmitCase && onOpenSubmitCase ? (
+          <Button
+            type="default"
+            icon={
+              <Send
+                className="size-4"
+                aria-hidden="true"
+              />
+            }
+            onClick={onOpenSubmitCase}
+            className={headerButtonClassName}
+          >
+            提交案例
+          </Button>
+        ) : null}
 
         {hasDeployUrl && deployInfoPopoverContent ? (
           <Popover

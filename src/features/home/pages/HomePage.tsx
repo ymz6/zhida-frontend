@@ -1,5 +1,5 @@
 import { useCreateApp } from '@/api/generated/endpoints/app'
-import { AppCard, type AppCardData } from '@/components/AppCard'
+import { PublicCasesPreviewSection } from '@/features/app-case/components/PublicCasesPreviewSection'
 import { useAuthSessionStore } from '@/stores/auth-session'
 import { useNavigate } from '@tanstack/react-router'
 import { App, Button, Input } from 'antd'
@@ -14,39 +14,6 @@ const typewriterPrompts = [
   '创建一个咖啡店会员管理后台，包含订单、积分和活动配置',
   '生成一个企业官网，展示服务、案例、团队和联系方式',
   '做一个知识库助手，可以整理文档、检索答案和生成摘要',
-]
-
-const galleryApps: AppCardData[] = [
-  {
-    id: 'gallery-app-1',
-    name: '企业服务官网',
-    authorName: 'Zhida Studio',
-    createdAt: '2026-04-12',
-    coverUrl:
-      'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'gallery-app-2',
-    name: '活动报名小程序后台',
-    authorName: '王一诺',
-    createdAt: '2026-04-18',
-    coverUrl:
-      'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'gallery-app-3',
-    name: '团队 OKR 看板',
-    authorName: '许航',
-    createdAt: '2026-04-20',
-  },
-  {
-    id: 'gallery-app-4',
-    name: '商品库存分析台',
-    authorName: '周沐',
-    createdAt: '2026-04-23',
-    coverUrl:
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80',
-  },
 ]
 
 function useTypewriterPlaceholder(prompts: readonly string[]) {
@@ -242,21 +209,7 @@ export function HomePage() {
 
       {isAuthenticated && <MyAppsSection />}
 
-      <section className="relative z-10 mx-auto mt-16 max-w-7xl">
-        <h2 className="flex items-center text-2xl font-bold text-slate-950">
-          <Compass className="mr-3 size-6 text-blue-500" />
-          案例广场
-        </h2>
-
-        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {galleryApps.map((app) => (
-            <AppCard
-              key={app.id}
-              app={app}
-            />
-          ))}
-        </div>
-      </section>
+      <PublicCasesPreviewSection />
     </main>
   )
 }

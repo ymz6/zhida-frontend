@@ -5,7 +5,7 @@ import { useAuthSessionStore } from '@/stores/auth-session'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { App, Avatar, Button, Dropdown, Layout, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { ChevronDown, LogOut, ShieldCheck, User } from 'lucide-react'
+import { ChevronDown, FileClock, LogOut, ShieldCheck, User } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -56,6 +56,7 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
 
   const navItems = [
     { key: '/', label: '首页' },
+    { key: '/cases', label: '案例广场' },
     { key: '/about', label: '关于' },
   ]
 
@@ -65,6 +66,11 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
   }))
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === '/cases') {
+      void navigate({ to: '/cases' })
+      return
+    }
+
     if (key === '/about') {
       void navigate({ to: '/about' })
       return
@@ -78,6 +84,11 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
       key: 'profile',
       label: '个人中心',
       icon: <User className="size-4" />,
+    },
+    {
+      key: 'my-cases',
+      label: '我的投稿',
+      icon: <FileClock className="size-4" />,
     },
     isAdmin
       ? {
@@ -98,6 +109,11 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
   const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'profile') {
       void navigate({ to: '/profile' })
+      return
+    }
+
+    if (key === 'my-cases') {
+      void navigate({ to: '/cases/mine' })
       return
     }
 

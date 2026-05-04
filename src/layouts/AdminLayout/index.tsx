@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  FolderKanban,
   Globe,
   LogOut,
   Users,
@@ -30,9 +31,18 @@ const adminMenuItems = [
     label: '用户管理',
     icon: <Users className="size-4" />,
   },
+  {
+    key: '/admin/cases',
+    label: '案例管理',
+    icon: <FolderKanban className="size-4" />,
+  },
 ] satisfies NonNullable<MenuProps['items']>
 
 function getSelectedKey(pathname: string) {
+  if (pathname.startsWith('/admin/cases')) {
+    return '/admin/cases'
+  }
+
   if (pathname.startsWith('/admin/users')) {
     return '/admin/users'
   }
@@ -88,6 +98,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
     if (targetKey === '/admin/users') {
       void navigate({ to: '/admin/users' })
+      return
+    }
+
+    if (targetKey === '/admin/cases') {
+      void navigate({ to: '/admin/cases' })
       return
     }
 
