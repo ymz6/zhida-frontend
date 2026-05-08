@@ -5,9 +5,8 @@
  * OpenAPI spec version: v0
  */
 
-export interface ListAppTasksRequest {
-  /** @minimum 1 */
-  pageNum?: number;
-  /** @minimum 1 */
-  pageSize?: number;
+export interface CreateAppResponse {
+  appId?: string;
+  name?: string;
+  status?: string;
 }

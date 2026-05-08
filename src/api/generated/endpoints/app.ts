@@ -26,17 +26,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  CreateAppIterationRequest,
+  ChatRequest,
   CreateAppRequest,
   ListAppMessagesParams,
-  ListAppTasksParams,
   ListMyAppsParams,
   ResponseAppDetail,
-  ResponseCreateAppTaskResponse,
+  ResponseCreateAppResponse,
   ResponseCursorResultAppChatMessageInfo,
   ResponseDeployAppResponse,
   ResponsePageResultAppSummary,
-  ResponsePageResultAppTaskInfo
+  SseEmitter
 } from '../models';
 
 import { customInstance } from '../../mutator/custom-instance';
@@ -53,7 +52,7 @@ export const createApp = (
 ) => {
 
 
-      return customInstance<ResponseCreateAppTaskResponse>(
+      return customInstance<ResponseCreateAppResponse>(
       {url: `/apps`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createAppRequest, signal
@@ -103,64 +102,6 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateAppMutationOptions(options), queryClient);
-    }
-    export const createAppIteration = (
-    appId: string,
-    createAppIterationRequest: CreateAppIterationRequest,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-
-
-      return customInstance<ResponseCreateAppTaskResponse>(
-      {url: `/apps/${appId}/iterations`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createAppIterationRequest, signal
-    },
-      options);
-    }
-
-
-
-export const getCreateAppIterationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppIteration>>, TError,{appId: string;data: CreateAppIterationRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createAppIteration>>, TError,{appId: string;data: CreateAppIterationRequest}, TContext> => {
-
-const mutationKey = ['createAppIteration'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAppIteration>>, {appId: string;data: CreateAppIterationRequest}> = (props) => {
-          const {appId,data} = props ?? {};
-
-          return  createAppIteration(appId,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateAppIterationMutationResult = NonNullable<Awaited<ReturnType<typeof createAppIteration>>>
-    export type CreateAppIterationMutationBody = CreateAppIterationRequest
-    export type CreateAppIterationMutationError = unknown
-
-    export const useCreateAppIteration = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppIteration>>, TError,{appId: string;data: CreateAppIterationRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createAppIteration>>,
-        TError,
-        {appId: string;data: CreateAppIterationRequest},
-        TContext
-      > => {
-      return useMutation(getCreateAppIterationMutationOptions(options), queryClient);
     }
     export const deployApp = (
     appId: string,
@@ -216,6 +157,64 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDeployAppMutationOptions(options), queryClient);
+    }
+    export const chatWithApp = (
+    appId: string,
+    chatRequest: ChatRequest,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<SseEmitter>(
+      {url: `/apps/${appId}/chat`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: chatRequest, signal
+    },
+      options);
+    }
+
+
+
+export const getChatWithAppMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chatWithApp>>, TError,{appId: string;data: ChatRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof chatWithApp>>, TError,{appId: string;data: ChatRequest}, TContext> => {
+
+const mutationKey = ['chatWithApp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chatWithApp>>, {appId: string;data: ChatRequest}> = (props) => {
+          const {appId,data} = props ?? {};
+
+          return  chatWithApp(appId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChatWithAppMutationResult = NonNullable<Awaited<ReturnType<typeof chatWithApp>>>
+    export type ChatWithAppMutationBody = ChatRequest
+    export type ChatWithAppMutationError = unknown
+
+    export const useChatWithApp = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chatWithApp>>, TError,{appId: string;data: ChatRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof chatWithApp>>,
+        TError,
+        {appId: string;data: ChatRequest},
+        TContext
+      > => {
+      return useMutation(getChatWithAppMutationOptions(options), queryClient);
     }
     export const getApp = (
     appId: string,
@@ -319,122 +318,6 @@ export const useGetGetAppQueryData = () => {
   const queryClient = useQueryClient();
   return (appId: string,) =>
     queryClient.getQueryData<Awaited<ReturnType<typeof getApp>>>(getGetAppQueryKey(appId));
-}
-
-
-export const listAppTasks = (
-    appId: string,
-    params: ListAppTasksParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-
-
-      return customInstance<ResponsePageResultAppTaskInfo>(
-      {url: `/apps/${appId}/tasks`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getListAppTasksQueryKey = (appId: string,
-    params?: ListAppTasksParams,) => {
-    return [
-    `/apps/${appId}/tasks`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getListAppTasksQueryOptions = <TData = Awaited<ReturnType<typeof listAppTasks>>, TError = unknown>(appId: string,
-    params: ListAppTasksParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAppTasks>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListAppTasksQueryKey(appId,params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAppTasks>>> = ({ signal }) => listAppTasks(appId,params, requestOptions, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(appId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAppTasks>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListAppTasksQueryResult = NonNullable<Awaited<ReturnType<typeof listAppTasks>>>
-export type ListAppTasksQueryError = unknown
-
-
-export function useListAppTasks<TData = Awaited<ReturnType<typeof listAppTasks>>, TError = unknown>(
- appId: string,
-    params: ListAppTasksParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAppTasks>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listAppTasks>>,
-          TError,
-          Awaited<ReturnType<typeof listAppTasks>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAppTasks<TData = Awaited<ReturnType<typeof listAppTasks>>, TError = unknown>(
- appId: string,
-    params: ListAppTasksParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAppTasks>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listAppTasks>>,
-          TError,
-          Awaited<ReturnType<typeof listAppTasks>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAppTasks<TData = Awaited<ReturnType<typeof listAppTasks>>, TError = unknown>(
- appId: string,
-    params: ListAppTasksParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAppTasks>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useListAppTasks<TData = Awaited<ReturnType<typeof listAppTasks>>, TError = unknown>(
- appId: string,
-    params: ListAppTasksParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAppTasks>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListAppTasksQueryOptions(appId,params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-export const invalidateListAppTasks = async (
- queryClient: QueryClient, appId: string,
-    params: ListAppTasksParams, options?: InvalidateOptions
-  ): Promise<QueryClient> => {
-
-  await queryClient.invalidateQueries({ queryKey: getListAppTasksQueryKey(appId,params) }, options);
-
-  return queryClient;
-}
-
-export const useSetListAppTasksQueryData = () => {
-  const queryClient = useQueryClient();
-  return (appId: string,
-    params: ListAppTasksParams,updater: Awaited<ReturnType<typeof listAppTasks>> | undefined | ((old: Awaited<ReturnType<typeof listAppTasks>> | undefined) => Awaited<ReturnType<typeof listAppTasks>> | undefined)) => {
-    queryClient.setQueryData(getListAppTasksQueryKey(appId,params), updater);
-  };
-}
-
-export const useGetListAppTasksQueryData = () => {
-  const queryClient = useQueryClient();
-  return (appId: string,
-    params: ListAppTasksParams,) =>
-    queryClient.getQueryData<Awaited<ReturnType<typeof listAppTasks>>>(getListAppTasksQueryKey(appId,params));
 }
 
 

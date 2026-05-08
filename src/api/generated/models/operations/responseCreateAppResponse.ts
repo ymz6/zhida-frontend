@@ -4,10 +4,10 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { AppTaskInfo } from './appTaskInfo';
+import type { CreateAppResponse } from './createAppResponse';
 
-export interface ResponseAppTaskInfo {
+export interface ResponseCreateAppResponse {
   code?: number;
   message?: string;
-  data?: AppTaskInfo;
+  data?: CreateAppResponse;
 }

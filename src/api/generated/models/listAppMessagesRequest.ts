@@ -6,7 +6,6 @@
  */
 
 export interface ListAppMessagesRequest {
-  taskId?: string;
   /**
      * @minimum 1
      * @maximum 100

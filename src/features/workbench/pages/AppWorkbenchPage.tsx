@@ -3,12 +3,10 @@ import {
   getListAppMessagesQueryKey,
   listAppMessages,
   type GetAppQueryResult,
-  useCreateAppIteration,
   useDeployApp,
   useGetApp,
 } from '@/api/generated/endpoints/app'
-import { useGetTask } from '@/api/generated/endpoints/app-task'
-import type { AppChatMessageInfo } from '@/api/generated/models'
+import { ChatRequestMode, type AppChatMessageInfo, type AppDetail } from '@/api/generated/models'
 import { SubmitCaseModal } from '@/features/app-case/components/SubmitCaseModal'
 import { queryClient } from '@/libs/query-client'
 import { useInfiniteQuery } from '@tanstack/react-query'
@@ -19,18 +17,29 @@ import { AppWorkbenchHeader } from '../components/AppWorkbenchHeader'
 import { AppWorkspacePanel } from '../components/AppWorkspacePanel'
 import { ConversationPanel } from '../components/ConversationPanel'
 import { DeploymentInfoCard } from '../components/DeploymentInfoCard'
-import { useTaskStream } from '../hooks/useTaskStream'
-import { isActiveAppStatus, isActiveTaskStatus, isTerminalTaskStatus } from '../types'
+import { useAppChatStream } from '../hooks/useAppChatStream'
+import { isActiveAppStatus } from '../types'
+import type { WorkbenchChatMessageInfo } from '../utils/conversationTimeline'
 import { updateAppDetailDeployResult } from '../utils/deploy'
+import { clearInitialAppPrompt, readInitialAppPrompt } from '../utils/initialPrompt'
 
 const CHAT_MESSAGES_LIMIT = 50
 
+function hasRunningAppStatus(appDetail: AppDetail | undefined) {
+  return (
+    appDetail?.status === 'GENERATING' ||
+    appDetail?.status === 'BUILDING' ||
+    appDetail?.status === 'ITERATING' ||
+    Boolean(appDetail?.status === 'CREATING' && appDetail.latestTaskId)
+  )
+}
+
 export function AppWorkbenchPage({ appId }: { appId: string }) {
   const { message, modal } = App.useApp()
-  const [pendingTaskId, setPendingTaskId] = useState<string>()
   const [previewReloadKey, setPreviewReloadKey] = useState(0)
   const [isSubmitCaseModalOpen, setIsSubmitCaseModalOpen] = useState(false)
-  const activePreviewTaskIdsRef = useRef(new Set<string>())
+  const initialPromptStartedRef = useRef(false)
+  const resumedTaskIdsRef = useRef(new Set<string>())
   const appQuery = useGetApp(appId)
 
   const messagesQueryKey = useMemo(
@@ -40,6 +49,7 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
   const messagesQuery = useInfiniteQuery({
     queryKey: messagesQueryKey,
     initialPageParam: '',
+    refetchOnWindowFocus: false,
     queryFn: ({ pageParam, signal }) =>
       listAppMessages(
         appId,
@@ -71,21 +81,7 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
       return nextCursor
     },
   })
-  const createIterationMutation = useCreateAppIteration()
   const deployMutation = useDeployApp()
-  const appDetail = appQuery.data?.data
-  const currentTaskId = pendingTaskId ?? appDetail?.latestTaskId
-  const hasLocalPendingTask = Boolean(pendingTaskId)
-  const shouldTrackTask = Boolean(
-    currentTaskId && (hasLocalPendingTask || isActiveAppStatus(appDetail?.status)),
-  )
-  const currentTaskQuery = useGetTask(currentTaskId ?? '', {
-    query: {
-      enabled: shouldTrackTask,
-    },
-  })
-  const taskDetail = currentTaskQuery.data?.data
-  const currentTask = currentTaskId && taskDetail?.id === currentTaskId ? taskDetail : undefined
 
   const handleStreamError = useCallback(
     (errorMessage: string) => {
@@ -94,28 +90,38 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
     [message],
   )
 
-  const taskStream = useTaskStream({
+  const handleStreamSettled = useCallback(
+    ({ mode, status }: { mode: ChatRequestMode; status?: string }) => {
+      if (mode === ChatRequestMode.CHAT) {
+        return
+      }
+
+      void queryClient.invalidateQueries({ queryKey: getGetAppQueryKey(appId) })
+      void queryClient.invalidateQueries({ queryKey: ['/apps/mine'] })
+
+      if (status !== 'FAILED') {
+        setPreviewReloadKey((key) => key + 1)
+      }
+    },
+    [appId],
+  )
+
+  const appChatStream = useAppChatStream({
     appId,
-    taskId: currentTaskId,
-    initialTaskStatus:
-      currentTask?.status ??
-      (hasLocalPendingTask || isActiveAppStatus(appDetail?.status) ? 'PENDING' : undefined),
-    enabled: Boolean(
-      shouldTrackTask &&
-      (hasLocalPendingTask || !currentTaskQuery.isLoading) &&
-      !isTerminalTaskStatus(currentTask?.status),
-    ),
     onError: handleStreamError,
+    onSettled: handleStreamSettled,
   })
+
+  const appDetail = appQuery.data?.data
 
   const persistedMessages = useMemo(
     () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.data?.list ?? []),
     [messagesQuery.data?.pages],
   )
 
-  const streamMessages = useMemo<AppChatMessageInfo[]>(
+  const streamMessages = useMemo<WorkbenchChatMessageInfo[]>(
     () =>
-      taskStream.streamMessages.map((streamMessage) => ({
+      appChatStream.streamMessages.map((streamMessage) => ({
         id: streamMessage.messageId ?? streamMessage.key,
         appId: streamMessage.appId,
         taskId: streamMessage.taskId,
@@ -124,19 +130,22 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
         content: streamMessage.content,
         metadata: streamMessage.metadata,
         createdAt: streamMessage.createdAt,
+        streaming: streamMessage.streaming,
       })),
-    [taskStream.streamMessages],
+    [appChatStream.streamMessages],
   )
 
-  const effectiveTaskStatus = taskStream.status ?? currentTask?.status
-  const effectiveTaskStep = taskStream.currentStep ?? currentTask?.currentStep
-  const isTaskRunning =
-    isActiveTaskStatus(effectiveTaskStatus) || isActiveAppStatus(appDetail?.status)
-  const canIterate = Boolean(
+  const effectiveTaskStatus = appChatStream.status
+  const effectiveTaskStep = appChatStream.currentStep
+  const isTaskRunning = appChatStream.isStreaming || hasRunningAppStatus(appDetail)
+  const canCode = Boolean(
     appDetail?.id &&
     !isTaskRunning &&
-    (appDetail.status === 'READY' || appDetail.status === 'FAILED'),
+    (appDetail.status === 'READY' ||
+      appDetail.status === 'FAILED' ||
+      appDetail.status === 'CREATING'),
   )
+  const canChat = Boolean(appDetail?.id && !isTaskRunning && appDetail.status === 'READY')
   const isDeploying = deployMutation.isPending || appDetail?.deployStatus === 'DEPLOYING'
   const canDeploy = Boolean(
     appDetail?.id && appDetail.status === 'READY' && !isTaskRunning && !isDeploying,
@@ -177,35 +186,36 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
     await messagesQuery.fetchNextPage()
   }, [messagesQuery.fetchNextPage, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage])
 
-  const handleSubmitIteration = async (prompt: string) => {
-    if (!canIterate) {
-      message.warning('当前任务完成后才能继续迭代')
-      return
-    }
-
-    if (prompt.length > 4000) {
-      message.warning('需求描述不能超过 4000 个字符')
-      return
-    }
-
-    try {
-      const response = await createIterationMutation.mutateAsync({
-        appId,
-        data: { prompt },
-      })
-      const nextTaskId = response.data?.taskId
-
-      if (!nextTaskId) {
-        message.error('后端未返回任务 ID')
-        return
+  const handleSubmitMessage = useCallback(
+    (prompt: string, mode: ChatRequestMode) => {
+      if (prompt.length > 4000) {
+        message.warning('需求描述不能超过 4000 个字符')
+        return false
       }
 
-      void queryClient.invalidateQueries({ queryKey: getListAppMessagesQueryKey(appId) })
-      setPendingTaskId(nextTaskId)
-    } catch (error) {
-      message.error((error as { message?: string })?.message ?? '创建迭代任务失败')
-    }
-  }
+      if (mode === ChatRequestMode.CHAT && !canChat) {
+        message.warning('应用生成成功后才能进行答疑')
+        return false
+      }
+
+      if (mode === ChatRequestMode.CODE && !canCode) {
+        message.warning(isTaskRunning ? '当前任务完成后才能继续输入' : '当前状态暂不能生成或修改')
+        return false
+      }
+
+      const started = appChatStream.startStream({
+        mode,
+        prompt,
+      })
+
+      if (!started) {
+        message.warning('当前任务完成后才能继续输入')
+      }
+
+      return started
+    },
+    [appChatStream, canChat, canCode, isTaskRunning, message],
+  )
 
   const handleDeploy = useCallback(async () => {
     if (!canDeploy) {
@@ -298,35 +308,50 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
   ])
 
   useEffect(() => {
-    if (!currentTaskId) {
+    if (!appDetail?.id || initialPromptStartedRef.current || appChatStream.isStreaming) {
       return
     }
 
-    if (isActiveTaskStatus(effectiveTaskStatus) || taskStream.isStreaming) {
-      activePreviewTaskIdsRef.current.add(currentTaskId)
+    const initialPrompt = readInitialAppPrompt(appId)
+
+    if (!initialPrompt) {
       return
     }
 
-    if (!isTerminalTaskStatus(effectiveTaskStatus)) {
-      return
-    }
+    const started = appChatStream.startStream({
+      mode: ChatRequestMode.CODE,
+      prompt: initialPrompt,
+      onOpen: () => clearInitialAppPrompt(appId),
+    })
 
-    const wasActive = activePreviewTaskIdsRef.current.delete(currentTaskId)
-
-    if (wasActive && effectiveTaskStatus === 'SUCCESS') {
-      setPreviewReloadKey((key) => key + 1)
+    if (started) {
+      initialPromptStartedRef.current = true
     }
-  }, [currentTaskId, effectiveTaskStatus, taskStream.isStreaming])
+  }, [appChatStream, appDetail?.id, appId])
 
   useEffect(() => {
     if (
-      pendingTaskId &&
-      currentTaskId === pendingTaskId &&
-      isTerminalTaskStatus(effectiveTaskStatus)
+      !appDetail?.id ||
+      !appDetail.latestTaskId ||
+      appChatStream.isStreaming ||
+      !isActiveAppStatus(appDetail.status) ||
+      readInitialAppPrompt(appId)
     ) {
-      setPendingTaskId(undefined)
+      return
     }
-  }, [currentTaskId, effectiveTaskStatus, pendingTaskId])
+
+    if (resumedTaskIdsRef.current.has(appDetail.latestTaskId)) {
+      return
+    }
+
+    const started = appChatStream.startStream({
+      mode: ChatRequestMode.RESUME,
+    })
+
+    if (started) {
+      resumedTaskIdsRef.current.add(appDetail.latestTaskId)
+    }
+  }, [appChatStream, appDetail?.id, appDetail?.latestTaskId, appDetail?.status, appId])
 
   return (
     <Layout className="fixed inset-0 z-0 flex overflow-hidden bg-slate-100 text-slate-950">
@@ -376,29 +401,34 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
 
             <Splitter className="h-full min-h-0 flex-1 overflow-hidden bg-white">
               <Splitter.Panel
-                defaultSize="380px"
-                min="320px"
+                defaultSize={380}
+                min={320}
                 max="48%"
               >
                 <ConversationPanel
                   key={appId}
                   persistedMessages={persistedMessages}
                   streamMessages={streamMessages}
-                  runtimeDetails={taskStream.runtimeDetails}
+                  runtimeDetails={appChatStream.runtimeDetails}
                   taskStatus={effectiveTaskStatus}
                   currentStep={effectiveTaskStep}
-                  currentTaskId={isTaskRunning ? currentTaskId : undefined}
-                  isStreaming={taskStream.isStreaming}
+                  currentTaskId={
+                    isTaskRunning
+                      ? (appChatStream.currentRunId ?? appDetail?.latestTaskId)
+                      : undefined
+                  }
+                  isStreaming={appChatStream.isStreaming}
                   isLoadingMessages={messagesQuery.isLoading}
                   hasMoreMessages={messagesQuery.hasNextPage}
                   isLoadingMoreMessages={messagesQuery.isFetchingNextPage}
-                  canIterate={canIterate}
-                  isSubmitting={createIterationMutation.isPending}
+                  canCode={canCode}
+                  canChat={canChat}
+                  isSubmitting={appChatStream.isStreaming}
                   onLoadMoreMessages={handleLoadMoreMessages}
-                  onSubmitIteration={handleSubmitIteration}
+                  onSubmitMessage={handleSubmitMessage}
                 />
               </Splitter.Panel>
-              <Splitter.Panel min="420px">
+              <Splitter.Panel min={420}>
                 <AppWorkspacePanel
                   key={appId}
                   previewUrl={appDetail?.previewUrl}

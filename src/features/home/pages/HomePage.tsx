@@ -1,5 +1,6 @@
 import { useCreateApp } from '@/api/generated/endpoints/app'
 import { PublicCasesPreviewSection } from '@/features/app-case/components/PublicCasesPreviewSection'
+import { saveInitialAppPrompt } from '@/features/workbench/utils/initialPrompt'
 import { useAuthSessionStore } from '@/stores/auth-session'
 import { useNavigate } from '@tanstack/react-router'
 import { App, Button, Input } from 'antd'
@@ -107,6 +108,8 @@ export function HomePage() {
         message.error('后端未返回应用 ID')
         return
       }
+
+      saveInitialAppPrompt(appId, nextPrompt)
 
       void navigate({
         to: '/workbench/$appId',

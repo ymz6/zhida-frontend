@@ -19,15 +19,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, DatePicker, Empty, Space, Typography } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
-import {
-  Activity,
-  AlertTriangle,
-  Cpu,
-  Network,
-  RefreshCw,
-  Server,
-  Sparkles,
-} from 'lucide-react'
+import { Activity, AlertTriangle, Cpu, Network, RefreshCw, Server, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 
 const { RangePicker } = DatePicker
@@ -166,7 +158,7 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1680px] space-y-6">
+    <div className="mx-auto max-w-420 space-y-6">
       <div className="rounded-xl border border-slate-200/60 bg-white px-6 py-5 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">

@@ -19,13 +19,12 @@ export const APP_TASK_STATUS_LABELS = {
   RUNNING: '执行中',
   SUCCESS: '执行成功',
   FAILED: '执行失败',
-  CANCELED: '已取消',
 } as const
 
 export const APP_TASK_STEP_LABELS = {
   INITIALIZING_WORKSPACE: '初始化工作区',
-  ANALYZING: '分析需求',
   GENERATING_CODE: '生成代码',
+  CHATTING: '对话答疑',
   BUILDING: '构建应用',
   DEPLOYING: '部署应用',
   FINISHED: '已完成',
@@ -33,9 +32,6 @@ export const APP_TASK_STEP_LABELS = {
 
 export const APP_CHAT_MESSAGE_TYPE_LABELS = {
   CHAT: '对话',
-  PLAN: '计划',
-  TOOL_CALL: '工具调用',
-  TOOL_RESULT: '工具结果',
   BUILD_LOG: '构建日志',
   ERROR: '错误',
 } as const
@@ -46,12 +42,20 @@ export type AppTaskStatus = keyof typeof APP_TASK_STATUS_LABELS
 export type AppTaskStep = keyof typeof APP_TASK_STEP_LABELS
 export type AppChatMessageRole = 'USER' | 'ASSISTANT' | 'TOOL' | 'SYSTEM'
 export type AppChatMessageType = keyof typeof APP_CHAT_MESSAGE_TYPE_LABELS
-export type TaskStreamEventName = 'connected' | 'message' | 'state' | 'command-log' | 'agent-trace'
+export type TaskStreamEventName =
+  | 'connected'
+  | 'message'
+  | 'state'
+  | 'assistant.delta'
+  | 'assistant.completed'
+  | 'command-log'
+  | `agent.${string}`
 
 export interface TaskStreamEvent {
   eventType: string
   appId?: string
   taskId?: string
+  taskEventId?: string
   status?: AppTaskStatus
   currentStep?: AppTaskStep
   messageId?: string
@@ -97,7 +101,7 @@ export function isActiveTaskStatus(status: string | undefined) {
 }
 
 export function isTerminalTaskStatus(status: string | undefined) {
-  return status === 'SUCCESS' || status === 'FAILED' || status === 'CANCELED'
+  return status === 'SUCCESS' || status === 'FAILED'
 }
 
 export function parseMessageMetadata(metadata: string | undefined): Record<string, unknown> | null {

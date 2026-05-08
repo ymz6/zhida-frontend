@@ -1,4 +1,4 @@
-import type { AppChatMessageInfo } from '@/api/generated/models'
+import type { AppChatMessageInfo, ChatRequestMode } from '@/api/generated/models'
 import { Bubble } from '@ant-design/x'
 import { Empty, Skeleton } from 'antd'
 import { Bot, UserRound } from 'lucide-react'
@@ -6,7 +6,10 @@ import type { ReactNode } from 'react'
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 
 import type { RuntimeDetailEvent } from '../types'
-import { buildTaskConversationGroups } from '../utils/conversationTimeline'
+import {
+  buildTaskConversationGroups,
+  type WorkbenchChatMessageInfo,
+} from '../utils/conversationTimeline'
 import { AssistantTaskContent } from './AssistantTaskContent'
 import { ConversationComposer } from './ConversationComposer'
 import { TaskProgress } from './TaskProgress'
@@ -47,6 +50,10 @@ function isNearBottom(element: HTMLElement) {
   return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_STICKY_THRESHOLD
 }
 
+function scrollToBottom(element: HTMLElement) {
+  element.scrollTop = element.scrollHeight
+}
+
 export function ConversationPanel({
   persistedMessages,
   streamMessages,
@@ -58,13 +65,14 @@ export function ConversationPanel({
   isLoadingMessages,
   hasMoreMessages,
   isLoadingMoreMessages,
-  canIterate,
+  canCode,
+  canChat,
   isSubmitting,
   onLoadMoreMessages,
-  onSubmitIteration,
+  onSubmitMessage,
 }: {
   persistedMessages: AppChatMessageInfo[]
-  streamMessages: AppChatMessageInfo[]
+  streamMessages: WorkbenchChatMessageInfo[]
   runtimeDetails: RuntimeDetailEvent[]
   taskStatus?: string
   currentStep?: string
@@ -73,15 +81,20 @@ export function ConversationPanel({
   isLoadingMessages?: boolean
   hasMoreMessages?: boolean
   isLoadingMoreMessages?: boolean
-  canIterate?: boolean
+  canCode?: boolean
+  canChat?: boolean
   isSubmitting?: boolean
   onLoadMoreMessages?: () => Promise<void>
-  onSubmitIteration: (prompt: string) => Promise<void>
+  onSubmitMessage: (prompt: string, mode: ChatRequestMode) => boolean
 }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const scrollContentRef = useRef<HTMLDivElement | null>(null)
   const restoreScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null)
   const didInitialScrollRef = useRef(false)
+  // 记录新内容到来时是否需要继续黏在最新消息处。
   const shouldStickToBottomRef = useRef(true)
+  // 提交成功后，即使用户正在查看历史消息，也需要跳到底部。
+  const shouldForceScrollBottomRef = useRef(false)
   const isRequestingMoreRef = useRef(false)
 
   const items = useMemo(() => {
@@ -183,7 +196,7 @@ export function ConversationPanel({
     }
   }, [loadMoreMessages])
 
-  useLayoutEffect(() => {
+  const syncConversationScroll = useCallback(() => {
     const scrollContainer = scrollContainerRef.current
 
     if (!scrollContainer || isLoadingMessages) {
@@ -193,30 +206,85 @@ export function ConversationPanel({
     const restoreScroll = restoreScrollRef.current
 
     if (restoreScroll) {
+      // 历史消息会插入到顶部，用高度差补偿当前视口，避免内容跳动。
       const heightDelta = scrollContainer.scrollHeight - restoreScroll.scrollHeight
 
       scrollContainer.scrollTop = restoreScroll.scrollTop + heightDelta
       restoreScrollRef.current = null
+      shouldStickToBottomRef.current = isNearBottom(scrollContainer)
       return
     }
 
+    // 首次渲染历史消息时，默认从最新消息开始看。
     if (!didInitialScrollRef.current && items.length > 0) {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight
+      scrollToBottom(scrollContainer)
       didInitialScrollRef.current = true
       shouldStickToBottomRef.current = true
+      shouldForceScrollBottomRef.current = false
       return
     }
 
-    if (shouldStickToBottomRef.current) {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight
+    if (shouldForceScrollBottomRef.current || shouldStickToBottomRef.current) {
+      scrollToBottom(scrollContainer)
+      shouldForceScrollBottomRef.current = false
+      shouldStickToBottomRef.current = true
     }
-  }, [
-    isLoadingMessages,
-    items.length,
-    persistedMessages.length,
-    runtimeDetails.length,
-    streamMessages.length,
-  ])
+  }, [isLoadingMessages, items.length])
+
+  useLayoutEffect(() => {
+    syncConversationScroll()
+  }, [items, syncConversationScroll])
+
+  useLayoutEffect(() => {
+    const scrollContent = scrollContentRef.current
+
+    if (!scrollContent || isLoadingMessages || typeof ResizeObserver === 'undefined') {
+      return
+    }
+
+    let frameId: number | undefined
+    const resizeObserver = new ResizeObserver(() => {
+      // 流式 Markdown 可能只改变 DOM 高度，不改变消息数量。
+      if (frameId !== undefined) {
+        window.cancelAnimationFrame(frameId)
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = undefined
+        syncConversationScroll()
+      })
+    })
+
+    resizeObserver.observe(scrollContent)
+
+    return () => {
+      if (frameId !== undefined) {
+        window.cancelAnimationFrame(frameId)
+      }
+
+      resizeObserver.disconnect()
+    }
+  }, [isLoadingMessages, syncConversationScroll])
+
+  const handleSubmitMessage = useCallback(
+    (prompt: string, mode: ChatRequestMode) => {
+      const didSubmit = onSubmitMessage(prompt, mode)
+
+      if (didSubmit) {
+        const scrollContainer = scrollContainerRef.current
+
+        shouldForceScrollBottomRef.current = true
+        shouldStickToBottomRef.current = true
+
+        if (scrollContainer) {
+          scrollToBottom(scrollContainer)
+        }
+      }
+
+      return didSubmit
+    },
+    [onSubmitMessage],
+  )
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-white">
@@ -225,32 +293,35 @@ export function ConversationPanel({
         onScroll={handleConversationScroll}
         className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4"
       >
-        {isLoadingMessages ? (
-          <Skeleton
-            active
-            avatar
-            paragraph={{ rows: 4 }}
-          />
-        ) : items.length > 0 ? (
-          <Bubble.List
-            autoScroll={false}
-            classNames={bubbleListClassNames}
-            items={items}
-            role={roles}
-          />
-        ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="暂无对话消息"
-            className="pt-20"
-          />
-        )}
+        <div ref={scrollContentRef}>
+          {isLoadingMessages ? (
+            <Skeleton
+              active
+              avatar
+              paragraph={{ rows: 4 }}
+            />
+          ) : items.length > 0 ? (
+            <Bubble.List
+              autoScroll={false}
+              classNames={bubbleListClassNames}
+              items={items}
+              role={roles}
+            />
+          ) : (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="暂无对话消息"
+              className="pt-20"
+            />
+          )}
+        </div>
       </div>
 
       <ConversationComposer
-        canIterate={canIterate}
+        canCode={canCode}
+        canChat={canChat}
         isSubmitting={isSubmitting}
-        onSubmitIteration={onSubmitIteration}
+        onSubmitMessage={handleSubmitMessage}
       />
     </section>
   )

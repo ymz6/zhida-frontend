@@ -6,12 +6,11 @@
  */
 
 export * from './changeAvatarBody';
-export * from './createAppTaskResponse';
+export * from './createAppResponse';
 export * from './deployAppResponse';
 export * from './getMonitoringDashboardParams';
 export * from './listAdminCasesParams';
 export * from './listAppMessagesParams';
-export * from './listAppTasksParams';
 export * from './listMyAppsParams';
 export * from './listMyCasesParams';
 export * from './listPublicCasesParams';
@@ -19,8 +18,6 @@ export * from './listUsersParams';
 export * from './loginResponse';
 export * from './monitoringMetricQuery';
 export * from './monitoringTableQuery';
-export * from './responseCreateAppTaskResponse';
+export * from './responseCreateAppResponse';
 export * from './responseDeployAppResponse';
 export * from './responseLoginResponse';
-export * from './responseTaskStatusResponse';
-export * from './taskStatusResponse';

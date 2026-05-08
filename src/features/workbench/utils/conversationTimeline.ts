@@ -1,18 +1,40 @@
 import type { AppChatMessageInfo } from '@/api/generated/models'
 
 import { parseMessageMetadata, type RuntimeDetailEvent } from '../types'
-import { getMessageTypeLabel } from './status'
+import { getMessageTypeLabel, getTaskStepLabel } from './status'
 
-export interface ConversationDetailItem {
+export interface WorkbenchChatMessageInfo extends AppChatMessageInfo {
+  streaming?: boolean
+}
+
+export type ConversationActivityKind =
+  | 'command'
+  | 'tool'
+  | 'stage'
+  | 'validation'
+  | 'run'
+  | 'system'
+  | 'event'
+
+export type ConversationActivityStatus = 'running' | 'success' | 'error' | 'info'
+
+export interface ConversationActivityItem {
+  type: 'activity'
   key: string
+  kind: ConversationActivityKind
   label: string
+  title: string
+  description?: string
   content: string
   metadata?: string
   detailType?: string
   eventType?: string
   command?: string
+  toolName?: string
+  path?: string
   logs?: string[]
   latestLog?: string
+  status: ConversationActivityStatus
   sortValue: number
   order: number
 }
@@ -20,6 +42,7 @@ export interface ConversationDetailItem {
 interface ConversationMessageItem {
   key: string
   content: string
+  streaming?: boolean
   sortValue: number
   order: number
 }
@@ -28,11 +51,7 @@ export type TaskConversationTimelineItem =
   | ({
       type: 'message'
     } & ConversationMessageItem)
-  | ({
-      type: 'detail'
-    } & ConversationDetailItem)
-
-type TaskConversationDetailTimelineItem = Extract<TaskConversationTimelineItem, { type: 'detail' }>
+  | ConversationActivityItem
 
 interface UserConversationItem {
   key: string
@@ -48,8 +67,14 @@ export interface TaskConversationGroup {
   timelineItems: TaskConversationTimelineItem[]
 }
 
+const ANSI_PATTERN = /\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g
+
+function normalizeText(content: string | undefined) {
+  return (content ?? '').replace(ANSI_PATTERN, '').replace(/\r\n?/g, '\n')
+}
+
 function isDetailMessage(messageType: string | undefined) {
-  return messageType === 'TOOL_CALL' || messageType === 'TOOL_RESULT' || messageType === 'BUILD_LOG'
+  return messageType === 'BUILD_LOG'
 }
 
 function getGroup(
@@ -85,7 +110,10 @@ export function getMetadataText(metadata: string | undefined) {
   }
 
   return Object.entries(parsedMetadata)
-    .map(([key, value]) => `${key}: ${String(value)}`)
+    .map(
+      ([key, value]) =>
+        `${key}: ${Array.isArray(value) ? value.map(String).join(' ') : String(value)}`,
+    )
     .join('\n')
 }
 
@@ -109,51 +137,26 @@ function getMetadataString(metadata: Record<string, unknown> | null, keys: strin
   return ''
 }
 
-function getCommandFromContent(content: string) {
-  const firstLine = content.split('\n').find((line) => line.trim())
+function getMetadataBoolean(metadata: Record<string, unknown> | null, keys: string[]) {
+  for (const key of keys) {
+    const value = metadata?.[key]
 
-  if (!firstLine) {
-    return ''
+    if (typeof value === 'boolean') {
+      return value
+    }
+
+    if (typeof value === 'string') {
+      if (value.toLowerCase() === 'true') {
+        return true
+      }
+
+      if (value.toLowerCase() === 'false') {
+        return false
+      }
+    }
   }
 
-  const trimmedLine = firstLine.trim()
-
-  return trimmedLine.startsWith('$ ') ? trimmedLine.slice(2).trim() : ''
-}
-
-function getCommandFromDetail({
-  content,
-  metadata,
-}: {
-  content: string | undefined
-  metadata: string | undefined
-}) {
-  const parsedMetadata = parseMessageMetadata(metadata)
-  const metadataCommand = getMetadataString(parsedMetadata, ['command', 'cmd'])
-
-  return metadataCommand || getCommandFromContent(content ?? '')
-}
-
-function isCommandLogDetail({
-  content,
-  detailType,
-  eventType,
-  metadata,
-}: {
-  content?: string
-  detailType?: string
-  eventType?: string
-  metadata?: string
-}) {
-  if (eventType === 'command-log') {
-    return true
-  }
-
-  if (detailType === 'BUILD_LOG') {
-    return Boolean(getCommandFromDetail({ content, metadata }))
-  }
-
-  return false
+  return undefined
 }
 
 function getEventSortValue(createdAt: string | undefined, fallback: number) {
@@ -166,14 +169,141 @@ function getEventSortValue(createdAt: string | undefined, fallback: number) {
   return Number.isNaN(timestamp) ? fallback : timestamp
 }
 
-function getDetailPreview(content: string) {
-  const firstLine = content.split('\n').find(Boolean)
+function getPreview(content: string | undefined, length = 80) {
+  const firstLine = normalizeText(content)
+    .split('\n')
+    .find((line) => line.trim())
+    ?.trim()
 
-  return firstLine ? firstLine.slice(0, 64) : ''
+  return firstLine ? firstLine.slice(0, length) : ''
 }
 
-function isNoisyCommandLogLine(content: string, command?: string) {
-  const trimmedContent = content.trim()
+function getCommandFromContent(content: string | undefined) {
+  const firstLine = normalizeText(content)
+    .split('\n')
+    .find((line) => line.trim())
+
+  if (!firstLine) {
+    return ''
+  }
+
+  const trimmedLine = firstLine.trim()
+
+  return trimmedLine.startsWith('$ ') ? trimmedLine.slice(2).trim() : ''
+}
+
+function getCommandFromDetail({ content, metadata }: { content?: string; metadata?: string }) {
+  const parsedMetadata = parseMessageMetadata(metadata)
+  const metadataCommand = getMetadataString(parsedMetadata, ['command', 'cmd'])
+
+  return metadataCommand || getCommandFromContent(content)
+}
+
+function getJsonObjectFromText(content: string | undefined) {
+  const jsonText = content?.match(/\{[\s\S]*\}/)?.[0]
+
+  if (!jsonText) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(jsonText)
+
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null
+  } catch {
+    return null
+  }
+}
+
+function getPathFromText(text: string | undefined) {
+  const pathMatch = normalizeText(text).match(/(?:[\w.-]+[\\/])+[\w.-]+\.[A-Za-z0-9]+/)
+
+  return pathMatch?.[0] ?? ''
+}
+
+function getPathFromToolEvent(content: string | undefined, metadata: string | undefined) {
+  const parsedMetadata = parseMessageMetadata(metadata)
+  const metadataPath = getMetadataString(parsedMetadata, ['path', 'filePath', 'filename', 'file'])
+
+  if (metadataPath) {
+    return metadataPath
+  }
+
+  const parsedContent = getJsonObjectFromText(content)
+  const contentPath = getMetadataString(parsedContent, ['path', 'filePath', 'filename', 'file'])
+
+  return contentPath || getPathFromText(content)
+}
+
+function getFileName(path: string) {
+  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path
+}
+
+function getActivityStatus(eventType: string | undefined, metadata: string | undefined) {
+  const parsedMetadata = parseMessageMetadata(metadata)
+  const success = getMetadataBoolean(parsedMetadata, ['success'])
+  const hasFailed = getMetadataBoolean(parsedMetadata, ['hasFailed', 'isError'])
+  const exitCode = Number(getMetadataString(parsedMetadata, ['exitCode']))
+
+  if (eventType?.endsWith('.started')) {
+    return 'running'
+  }
+
+  if (eventType?.endsWith('.failed') || success === false || hasFailed === true) {
+    return 'error'
+  }
+
+  if (!Number.isNaN(exitCode) && exitCode !== 0) {
+    return 'error'
+  }
+
+  if (eventType?.endsWith('.succeeded') || success === true || hasFailed === false) {
+    return 'success'
+  }
+
+  return 'info'
+}
+
+function getRuntimeEventLabel(eventType: string | undefined) {
+  if (!eventType) {
+    return '运行明细'
+  }
+
+  if (eventType === 'command-log') {
+    return '命令日志'
+  }
+
+  if (eventType.startsWith('agent.command.')) {
+    return '命令'
+  }
+
+  if (eventType.startsWith('agent.tool.')) {
+    return '工具'
+  }
+
+  if (eventType.startsWith('agent.stage.')) {
+    return '阶段'
+  }
+
+  if (eventType.startsWith('agent.validation.')) {
+    return '校验'
+  }
+
+  if (eventType.startsWith('agent.run.')) {
+    return '任务'
+  }
+
+  if (eventType.startsWith('agent.')) {
+    return 'Agent'
+  }
+
+  return '运行明细'
+}
+
+function isNoisyLogLine(content: string, command?: string) {
+  const trimmedContent = normalizeText(content).trim()
 
   return (
     !trimmedContent ||
@@ -191,106 +321,396 @@ function getLatestMeaningfulLog(logs: string[] | undefined, command?: string) {
   for (let index = logs.length - 1; index >= 0; index -= 1) {
     const log = logs[index]
 
-    if (!isNoisyCommandLogLine(log, command)) {
-      return log.trim()
+    if (!isNoisyLogLine(log, command)) {
+      return normalizeText(log).trim()
     }
   }
 
   return ''
 }
 
-function getPathFromText(text: string) {
-  const pathMatch = text.match(/(?:[\w.-]+\/)+[\w.-]+\.[A-Za-z0-9]+/)
-
-  return pathMatch?.[0] ?? ''
-}
-
-function getFileName(path: string) {
-  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path
-}
-
-export function getDetailSummary(item: ConversationDetailItem) {
-  const metadata = parseMessageMetadata(item.metadata)
-  const command = item.command || getMetadataString(metadata, ['command', 'cmd'])
-  const toolName = getMetadataString(metadata, ['toolName', 'tool', 'name'])
-  const metadataPath = getMetadataString(metadata, ['path', 'filePath', 'filename', 'file'])
-  const textPath = getPathFromText(item.content)
-  const path = metadataPath || textPath
-  const exitCode = getMetadataString(metadata, ['exitCode'])
-  const success = getMetadataString(metadata, ['success'])
-  const latestLog = item.latestLog || getLatestMeaningfulLog(item.logs, command)
-  const preview = getDetailPreview(item.content)
-
-  if (path) {
-    return {
-      primary: getFileName(path),
-      secondary: path,
-    }
-  }
-
-  if (command) {
-    return {
-      primary: command,
-      secondary: exitCode ? `exit ${exitCode}` : success ? `success ${success}` : latestLog,
-    }
-  }
-
-  if (toolName) {
-    return {
-      primary: toolName,
-      secondary: preview,
-    }
-  }
-
-  return {
-    primary: preview || item.label,
-    secondary: '',
-  }
-}
-
-function getCommandLogGroupKey(taskId: string | undefined, command: string) {
+function getCommandActivityKey(taskId: string | undefined, command: string) {
   return `command-${taskId ?? 'task'}-${command}`
 }
 
-function appendCommandLogItem({
-  commandLogItems,
-  group,
-  item,
+function getToolPendingKey(taskId: string | undefined, toolName: string) {
+  return `tool-pending-${taskId ?? 'task'}-${toolName}`
+}
+
+function getToolActivityKey({
+  fallback,
+  path,
   taskId,
+  toolName,
 }: {
-  commandLogItems: Map<string, TaskConversationDetailTimelineItem>
-  group: TaskConversationGroup
-  item: ConversationDetailItem
+  fallback: string
+  path?: string
   taskId?: string
+  toolName: string
 }) {
-  if (!item.command) {
-    group.timelineItems.push({ ...item, type: 'detail' })
+  if (path) {
+    return `tool-${taskId ?? 'task'}-${toolName}-${path}`
+  }
+
+  return fallback
+}
+
+function getActivityKind(eventType: string | undefined): ConversationActivityKind {
+  if (eventType?.startsWith('agent.command.') || eventType === 'command-log') {
+    return 'command'
+  }
+
+  if (eventType?.startsWith('agent.tool.')) {
+    return 'tool'
+  }
+
+  if (eventType?.startsWith('agent.stage.')) {
+    return 'stage'
+  }
+
+  if (eventType?.startsWith('agent.validation.')) {
+    return 'validation'
+  }
+
+  if (eventType?.startsWith('agent.run.')) {
+    return 'run'
+  }
+
+  return 'event'
+}
+
+function buildActivityTitle({
+  command,
+  content,
+  eventType,
+  kind,
+  metadata,
+  path,
+  toolName,
+}: {
+  command?: string
+  content?: string
+  eventType?: string
+  kind: ConversationActivityKind
+  metadata?: string
+  path?: string
+  toolName?: string
+}) {
+  const parsedMetadata = parseMessageMetadata(metadata)
+
+  if (kind === 'command') {
+    return command || '命令日志'
+  }
+
+  if (kind === 'tool') {
+    return path ? `${toolName || '工具'} · ${getFileName(path)}` : toolName || '工具调用'
+  }
+
+  if (kind === 'stage') {
+    const stepLabel = getTaskStepLabel(getMetadataString(parsedMetadata, ['currentStep']))
+
+    return stepLabel ? `阶段切换为 ${stepLabel}` : getPreview(content) || '阶段切换'
+  }
+
+  if (kind === 'validation') {
+    return '执行项目校验'
+  }
+
+  if (kind === 'run') {
+    const appName = getMetadataString(parsedMetadata, ['appName'])
+    const scenario = getMetadataString(parsedMetadata, ['scenario'])
+
+    return appName ? `开始处理 ${appName}` : scenario ? `Agent 执行 ${scenario}` : 'Agent 开始执行'
+  }
+
+  if (eventType === 'system-message') {
+    return getPreview(content) || '系统消息'
+  }
+
+  return getPreview(content) || getRuntimeEventLabel(eventType)
+}
+
+function appendActivityLog(item: ConversationActivityItem, content: string | undefined) {
+  const logText = normalizeText(content).trimEnd()
+
+  if (!logText) {
     return
   }
 
-  const commandLogKey = getCommandLogGroupKey(taskId, item.command)
-  const existingItem = commandLogItems.get(commandLogKey)
+  const logs = item.logs ?? []
+
+  // 命令日志通常逐行推送，相邻重复行会让折叠内容显得抖动。
+  if (logs.at(-1) === logText) {
+    return
+  }
+
+  item.logs = [...logs, logText]
+  item.latestLog = getLatestMeaningfulLog(item.logs, item.command)
+}
+
+function upsertActivity({
+  activityItems,
+  group,
+  key,
+  next,
+}: {
+  activityItems: Map<string, ConversationActivityItem>
+  group: TaskConversationGroup
+  key: string
+  next: Omit<ConversationActivityItem, 'type' | 'key'>
+}) {
+  const existingItem = activityItems.get(key)
 
   if (existingItem) {
-    existingItem.content = [existingItem.content, item.content].filter(Boolean).join('\n')
-    existingItem.metadata = item.metadata || existingItem.metadata
-    existingItem.logs = [...(existingItem.logs ?? []), item.content]
-    existingItem.latestLog = getLatestMeaningfulLog(existingItem.logs, existingItem.command)
-    existingItem.sortValue = Math.min(existingItem.sortValue, item.sortValue)
-    existingItem.order = Math.min(existingItem.order, item.order)
+    existingItem.title = next.title || existingItem.title
+    existingItem.description = next.description || existingItem.description
+    existingItem.content = next.content || existingItem.content
+    existingItem.metadata = next.metadata || existingItem.metadata
+    existingItem.detailType = next.detailType || existingItem.detailType
+    existingItem.eventType = next.eventType || existingItem.eventType
+    existingItem.command = next.command || existingItem.command
+    existingItem.toolName = next.toolName || existingItem.toolName
+    existingItem.path = next.path || existingItem.path
+    existingItem.status = next.status === 'info' ? existingItem.status : next.status
+    existingItem.sortValue = Math.min(existingItem.sortValue, next.sortValue)
+    existingItem.order = Math.min(existingItem.order, next.order)
+    return existingItem
+  }
+
+  const activityItem: ConversationActivityItem = {
+    ...next,
+    type: 'activity',
+    key,
+  }
+
+  activityItems.set(key, activityItem)
+  group.timelineItems.push(activityItem)
+
+  return activityItem
+}
+
+function appendSystemActivity({
+  activityItems,
+  group,
+  key,
+  message,
+  order,
+  sortValue,
+}: {
+  activityItems: Map<string, ConversationActivityItem>
+  group: TaskConversationGroup
+  key: string
+  message: WorkbenchChatMessageInfo
+  order: number
+  sortValue: number
+}) {
+  upsertActivity({
+    activityItems,
+    group,
+    key: `system-${key}`,
+    next: {
+      kind: 'system',
+      label: '系统',
+      title: buildActivityTitle({
+        content: message.content,
+        eventType: 'system-message',
+        kind: 'event',
+      }),
+      content: normalizeText(message.content),
+      metadata: message.metadata,
+      detailType: message.messageType,
+      eventType: 'system-message',
+      status: 'info',
+      sortValue,
+      order,
+    },
+  })
+}
+
+function appendBuildLogActivity({
+  activityItems,
+  group,
+  message,
+  order,
+  sortValue,
+}: {
+  activityItems: Map<string, ConversationActivityItem>
+  group: TaskConversationGroup
+  message: WorkbenchChatMessageInfo
+  order: number
+  sortValue: number
+}) {
+  const command = getCommandFromDetail({
+    content: message.content,
+    metadata: message.metadata,
+  })
+  const activityKey = command
+    ? getCommandActivityKey(message.taskId, command)
+    : `build-log-${message.id ?? `${message.taskId ?? 'message'}-${order}`}`
+  const status = getActivityStatus('agent.command.succeeded', message.metadata)
+  const activityItem = upsertActivity({
+    activityItems,
+    group,
+    key: activityKey,
+    next: {
+      kind: command ? 'command' : 'event',
+      label: getMessageTypeLabel(message.messageType),
+      title: command || getPreview(message.content) || getMessageTypeLabel(message.messageType),
+      content: normalizeText(message.content),
+      metadata: message.metadata,
+      detailType: message.messageType,
+      command,
+      status,
+      sortValue,
+      order,
+    },
+  })
+
+  appendActivityLog(activityItem, message.content)
+}
+
+function appendRuntimeActivity({
+  activityItems,
+  detail,
+  group,
+  order,
+  pendingToolItems,
+  sortValue,
+}: {
+  activityItems: Map<string, ConversationActivityItem>
+  detail: RuntimeDetailEvent
+  group: TaskConversationGroup
+  order: number
+  pendingToolItems: Map<string, string>
+  sortValue: number
+}) {
+  const eventType = detail.eventType
+  const metadata = detail.metadata
+  const kind = getActivityKind(eventType)
+  const status = getActivityStatus(eventType, metadata)
+
+  if (kind === 'command') {
+    const command =
+      getCommandFromDetail({
+        content: detail.content,
+        metadata,
+      }) || '命令日志'
+    const activityKey = getCommandActivityKey(detail.taskId, command)
+    const activityItem = upsertActivity({
+      activityItems,
+      group,
+      key: activityKey,
+      next: {
+        kind: 'command',
+        label: getRuntimeEventLabel(eventType),
+        title: buildActivityTitle({
+          command,
+          content: detail.content,
+          eventType,
+          kind: 'command',
+          metadata,
+        }),
+        content: normalizeText(detail.content),
+        metadata,
+        detailType: detail.messageType,
+        eventType,
+        command,
+        status,
+        sortValue,
+        order,
+      },
+    })
+
+    if (eventType === 'command-log') {
+      appendActivityLog(activityItem, detail.content)
+    } else if (
+      (eventType?.endsWith('.succeeded') || eventType?.endsWith('.failed')) &&
+      !activityItem.logs?.length
+    ) {
+      appendActivityLog(activityItem, detail.content)
+    }
+
     return
   }
 
-  const nextItem: TaskConversationDetailTimelineItem = {
-    ...item,
-    type: 'detail',
-    key: commandLogKey,
-    logs: item.content ? [item.content] : [],
-    latestLog: getLatestMeaningfulLog(item.content ? [item.content] : [], item.command),
+  if (kind === 'tool') {
+    const parsedMetadata = parseMessageMetadata(metadata)
+    const toolName = getMetadataString(parsedMetadata, ['toolName', 'tool', 'name']) || '工具'
+    const path = getPathFromToolEvent(detail.content, metadata)
+    const pendingKey = getToolPendingKey(detail.taskId, toolName)
+    const fallbackKey = detail.taskEventId
+      ? `tool-event-${detail.taskEventId}`
+      : `tool-${detail.taskId ?? 'task'}-${order}`
+    const activityKey =
+      eventType?.endsWith('.called') || path
+        ? getToolActivityKey({
+            fallback: fallbackKey,
+            path,
+            taskId: detail.taskId,
+            toolName,
+          })
+        : (pendingToolItems.get(pendingKey) ?? fallbackKey)
+    const activityItem = upsertActivity({
+      activityItems,
+      group,
+      key: activityKey,
+      next: {
+        kind: 'tool',
+        label: getRuntimeEventLabel(eventType),
+        title: buildActivityTitle({
+          content: detail.content,
+          eventType,
+          kind: 'tool',
+          metadata,
+          path,
+          toolName,
+        }),
+        description: path,
+        content: normalizeText(eventType?.endsWith('.called') ? '' : detail.content),
+        metadata,
+        detailType: detail.messageType,
+        eventType,
+        path,
+        toolName,
+        status,
+        sortValue,
+        order,
+      },
+    })
+
+    if (eventType?.endsWith('.called')) {
+      pendingToolItems.set(pendingKey, activityKey)
+    }
+
+    return
   }
 
-  commandLogItems.set(commandLogKey, nextItem)
-  group.timelineItems.push(nextItem)
+  const activityKey = detail.taskEventId
+    ? `activity-${detail.taskEventId}`
+    : `activity-${detail.taskId ?? 'task'}-${order}`
+
+  upsertActivity({
+    activityItems,
+    group,
+    key: activityKey,
+    next: {
+      kind,
+      label: getRuntimeEventLabel(eventType),
+      title: buildActivityTitle({
+        content: detail.content,
+        eventType,
+        kind,
+        metadata,
+      }),
+      content: normalizeText(detail.content),
+      metadata,
+      detailType: detail.messageType,
+      eventType,
+      status,
+      sortValue,
+      order,
+    },
+  })
 }
 
 function sortTimelineItems(
@@ -304,6 +724,38 @@ function sortTimelineItems(
   return firstItem.order - secondItem.order
 }
 
+export function getActivityDetailText(item: ConversationActivityItem) {
+  const logText = item.logs?.filter(Boolean).join('\n') ?? ''
+  const contentText = normalizeText(item.content)
+  const metadataText = getMetadataText(item.metadata)
+
+  return [logText || contentText, metadataText].filter(Boolean).join('\n\n')
+}
+
+export function getActivityLineCount(item: ConversationActivityItem) {
+  const detailText = item.logs?.filter(Boolean).join('\n') || item.content
+
+  return normalizeText(detailText)
+    .split('\n')
+    .filter((line) => line.trim()).length
+}
+
+export function getActivityDescription(item: ConversationActivityItem) {
+  if (item.kind === 'command') {
+    return item.latestLog || getPreview(item.content)
+  }
+
+  if (item.description) {
+    return item.description
+  }
+
+  if (item.kind === 'tool') {
+    return getPreview(item.content)
+  }
+
+  return getPreview(item.content)
+}
+
 export function buildTaskConversationGroups({
   persistedMessages,
   runtimeDetails,
@@ -311,13 +763,15 @@ export function buildTaskConversationGroups({
 }: {
   persistedMessages: AppChatMessageInfo[]
   runtimeDetails: RuntimeDetailEvent[]
-  streamMessages: AppChatMessageInfo[]
+  streamMessages: WorkbenchChatMessageInfo[]
 }) {
   const groups = new Map<string, TaskConversationGroup>()
-  const commandLogItems = new Map<string, TaskConversationDetailTimelineItem>()
+  const activityItems = new Map<string, ConversationActivityItem>()
+  const pendingToolItems = new Map<string, string>()
   const seenMessageKeys = new Set<string>()
+  const allMessages: WorkbenchChatMessageInfo[] = [...persistedMessages, ...streamMessages]
 
-  ;[...persistedMessages, ...streamMessages].forEach((message, index) => {
+  allMessages.forEach((message, index) => {
     const messageKey = message.id ?? `${message.taskId ?? 'message'}-${message.createdAt ?? index}`
 
     if (seenMessageKeys.has(messageKey)) {
@@ -346,40 +800,25 @@ export function buildTaskConversationGroups({
     }
 
     if (isDetailMessage(message.messageType)) {
-      const command =
-        getCommandFromDetail({
-          content: message.content,
-          metadata: message.metadata,
-        }) || '命令日志'
-      const isCommandLog = isCommandLogDetail({
-        content: message.content,
-        detailType: message.messageType,
-        metadata: message.metadata,
-      })
-      const detailItem: ConversationDetailItem = {
-        key: messageKey,
-        label: getMessageTypeLabel(message.messageType),
-        content: message.content ?? '',
-        metadata: message.metadata,
-        detailType: message.messageType,
-        command: isCommandLog ? command : undefined,
-        sortValue,
+      appendBuildLogActivity({
+        activityItems,
+        group,
+        message,
         order: index,
-      }
+        sortValue,
+      })
+      return
+    }
 
-      if (detailItem.command) {
-        appendCommandLogItem({
-          commandLogItems,
-          group,
-          item: detailItem,
-          taskId: message.taskId,
-        })
-      } else {
-        group.timelineItems.push({
-          ...detailItem,
-          type: 'detail',
-        })
-      }
+    if (message.role === 'SYSTEM') {
+      appendSystemActivity({
+        activityItems,
+        group,
+        key: messageKey,
+        message,
+        order: index,
+        sortValue,
+      })
       return
     }
 
@@ -387,6 +826,7 @@ export function buildTaskConversationGroups({
       type: 'message',
       key: messageKey,
       content: message.content ?? '',
+      streaming: message.streaming,
       sortValue,
       order: index,
     })
@@ -398,44 +838,16 @@ export function buildTaskConversationGroups({
     const sortValue = getEventSortValue(detail.createdAt, detail.receivedAt)
     const group = getGroup(groups, groupKey, sortValue, detail.taskId)
 
-    const command =
-      getCommandFromDetail({
-        content: detail.content,
-        metadata: detail.metadata,
-      }) || '命令日志'
-    const isCommandLog = isCommandLogDetail({
-      content: detail.content,
-      detailType: detail.messageType,
-      eventType: detail.eventType,
-      metadata: detail.metadata,
-    })
-    const detailItem: ConversationDetailItem = {
-      key: detail.id,
-      label: detail.eventType === 'agent-trace' ? 'Agent Trace' : '命令日志',
-      content: detail.content ?? '',
-      metadata: detail.metadata,
-      eventType: detail.eventType,
-      detailType: detail.messageType,
-      command: isCommandLog ? command : undefined,
-      sortValue,
-      order,
-    }
-
     group.order = Math.min(group.order, sortValue)
 
-    if (detailItem.command) {
-      appendCommandLogItem({
-        commandLogItems,
-        group,
-        item: detailItem,
-        taskId: detail.taskId,
-      })
-    } else {
-      group.timelineItems.push({
-        ...detailItem,
-        type: 'detail',
-      })
-    }
+    appendRuntimeActivity({
+      activityItems,
+      detail,
+      group,
+      order,
+      pendingToolItems,
+      sortValue,
+    })
   })
 
   return [...groups.values()]

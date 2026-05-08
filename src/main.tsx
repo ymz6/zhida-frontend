@@ -1,4 +1,3 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 
@@ -17,17 +16,15 @@ import 'dayjs/locale/zh-cn'
 import { XProvider } from '@ant-design/x'
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <StyleProvider layer>
-      <XProvider>
-        <ConfigProvider locale={zhCN}>
-          <App>
-            <QueryClientProvider client={queryClient}>
-              <RouterProvider router={router} />
-            </QueryClientProvider>
-          </App>
-        </ConfigProvider>
-      </XProvider>
-    </StyleProvider>
-  </StrictMode>,
+  <StyleProvider layer>
+    <XProvider>
+      <ConfigProvider locale={zhCN}>
+        <App>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </App>
+      </ConfigProvider>
+    </XProvider>
+  </StyleProvider>,
 )
