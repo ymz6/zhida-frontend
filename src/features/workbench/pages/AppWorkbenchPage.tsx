@@ -22,6 +22,7 @@ import { isActiveAppStatus } from '../types'
 import type { WorkbenchChatMessageInfo } from '../utils/conversationTimeline'
 import { updateAppDetailDeployResult } from '../utils/deploy'
 import { clearInitialAppPrompt, readInitialAppPrompt } from '../utils/initialPrompt'
+import { buildVisualEditPrompt, type VisualEditElement } from '../utils/visualEdit'
 
 const CHAT_MESSAGES_LIMIT = 50
 
@@ -38,6 +39,9 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
   const { message, modal } = App.useApp()
   const [previewReloadKey, setPreviewReloadKey] = useState(0)
   const [isSubmitCaseModalOpen, setIsSubmitCaseModalOpen] = useState(false)
+  const [isVisualEditMode, setIsVisualEditMode] = useState(false)
+  const [selectedVisualEditElement, setSelectedVisualEditElement] =
+    useState<VisualEditElement | null>(null)
   const initialPromptStartedRef = useRef(false)
   const resumedTaskIdsRef = useRef(new Set<string>())
   const appQuery = useGetApp(appId)
@@ -146,6 +150,7 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
       appDetail.status === 'CREATING'),
   )
   const canChat = Boolean(appDetail?.id && !isTaskRunning && appDetail.status === 'READY')
+  const canVisualEdit = Boolean(canCode && appDetail?.previewUrl)
   const isDeploying = deployMutation.isPending || appDetail?.deployStatus === 'DEPLOYING'
   const canDeploy = Boolean(
     appDetail?.id && appDetail.status === 'READY' && !isTaskRunning && !isDeploying,
@@ -186,35 +191,90 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
     await messagesQuery.fetchNextPage()
   }, [messagesQuery.fetchNextPage, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage])
 
+  const handleVisualEditModeChange = useCallback(
+    (enabled: boolean) => {
+      if (!enabled) {
+        setIsVisualEditMode(false)
+        setSelectedVisualEditElement(null)
+        return
+      }
+
+      if (!canVisualEdit) {
+        message.warning(
+          appDetail?.previewUrl ? '当前状态暂不能生成或修改' : '预览加载后才能使用编辑',
+        )
+        return
+      }
+
+      setIsVisualEditMode(true)
+      setSelectedVisualEditElement(null)
+    },
+    [appDetail?.previewUrl, canVisualEdit, message],
+  )
+
+  const handleVisualEditElementSelect = useCallback((element: VisualEditElement) => {
+    setSelectedVisualEditElement(element)
+  }, [])
+
   const handleSubmitMessage = useCallback(
     (prompt: string, mode: ChatRequestMode) => {
-      if (prompt.length > 4000) {
-        message.warning('需求描述不能超过 4000 个字符')
+      const effectiveMode = isVisualEditMode ? ChatRequestMode.CODE : mode
+      let requestPrompt = prompt
+
+      if (isVisualEditMode) {
+        if (!selectedVisualEditElement) {
+          message.warning('请先在预览中选择要编辑的元素')
+          return false
+        }
+
+        // 发送给 Agent 的内容包含源码定位，聊天区展示时会解析成用户友好的摘要。
+        requestPrompt = buildVisualEditPrompt(prompt, selectedVisualEditElement)
+      }
+
+      if (requestPrompt.length > 4000) {
+        message.warning(
+          isVisualEditMode
+            ? '需求和选中元素信息不能超过 4000 个字符'
+            : '需求描述不能超过 4000 个字符',
+        )
         return false
       }
 
-      if (mode === ChatRequestMode.CHAT && !canChat) {
+      if (effectiveMode === ChatRequestMode.CHAT && !canChat) {
         message.warning('应用生成成功后才能进行答疑')
         return false
       }
 
-      if (mode === ChatRequestMode.CODE && !canCode) {
+      if (effectiveMode === ChatRequestMode.CODE && !canCode) {
         message.warning(isTaskRunning ? '当前任务完成后才能继续输入' : '当前状态暂不能生成或修改')
         return false
       }
 
       const started = appChatStream.startStream({
-        mode,
-        prompt,
+        mode: effectiveMode,
+        prompt: requestPrompt,
       })
 
       if (!started) {
         message.warning('当前任务完成后才能继续输入')
       }
 
+      if (started && isVisualEditMode) {
+        setIsVisualEditMode(false)
+        setSelectedVisualEditElement(null)
+      }
+
       return started
     },
-    [appChatStream, canChat, canCode, isTaskRunning, message],
+    [
+      appChatStream,
+      canChat,
+      canCode,
+      isTaskRunning,
+      isVisualEditMode,
+      message,
+      selectedVisualEditElement,
+    ],
   )
 
   const handleDeploy = useCallback(async () => {
@@ -353,6 +413,15 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
     }
   }, [appChatStream, appDetail?.id, appDetail?.latestTaskId, appDetail?.status, appId])
 
+  useEffect(() => {
+    if (!isVisualEditMode || canVisualEdit) {
+      return
+    }
+
+    setIsVisualEditMode(false)
+    setSelectedVisualEditElement(null)
+  }, [canVisualEdit, isVisualEditMode])
+
   return (
     <Layout className="fixed inset-0 z-0 flex overflow-hidden bg-slate-100 text-slate-950">
       <AppWorkbenchHeader
@@ -424,7 +493,11 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
                   canCode={canCode}
                   canChat={canChat}
                   isSubmitting={appChatStream.isStreaming}
+                  previewUrl={appDetail?.previewUrl}
+                  isVisualEditMode={isVisualEditMode}
+                  selectedVisualEditElement={selectedVisualEditElement}
                   onLoadMoreMessages={handleLoadMoreMessages}
+                  onVisualEditModeChange={handleVisualEditModeChange}
                   onSubmitMessage={handleSubmitMessage}
                 />
               </Splitter.Panel>
@@ -435,6 +508,9 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
                   previewReloadKey={previewReloadKey}
                   isGenerating={isTaskRunning}
                   errorMessage={appDetail?.errorMessage}
+                  isVisualEditMode={isVisualEditMode}
+                  onVisualEditModeChange={handleVisualEditModeChange}
+                  onVisualEditElementSelect={handleVisualEditElementSelect}
                 />
               </Splitter.Panel>
             </Splitter>

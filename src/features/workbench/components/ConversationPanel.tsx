@@ -1,7 +1,7 @@
 import type { AppChatMessageInfo, ChatRequestMode } from '@/api/generated/models'
 import { Bubble } from '@ant-design/x'
 import { Empty, Skeleton } from 'antd'
-import { Bot, UserRound } from 'lucide-react'
+import { Bot, Crosshair, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 
@@ -10,6 +10,11 @@ import {
   buildTaskConversationGroups,
   type WorkbenchChatMessageInfo,
 } from '../utils/conversationTimeline'
+import {
+  parseVisualEditPrompt,
+  type ParsedVisualEditPrompt,
+  type VisualEditElement,
+} from '../utils/visualEdit'
 import { AssistantTaskContent } from './AssistantTaskContent'
 import { ConversationComposer } from './ConversationComposer'
 import { TaskProgress } from './TaskProgress'
@@ -54,6 +59,66 @@ function scrollToBottom(element: HTMLElement) {
   element.scrollTop = element.scrollHeight
 }
 
+function VisualEditUserMessage({ parsedPrompt }: { parsedPrompt: ParsedVisualEditPrompt }) {
+  const { element, requirement, sourceLocation } = parsedPrompt
+  const lineText = sourceLocation.lineNumber ? ` (${sourceLocation.lineNumber})` : ''
+
+  return (
+    <div className="max-w-full space-y-3 text-left text-base leading-7 text-slate-950">
+      <div>请对以下选中元素进行修改：</div>
+      <div>
+        <span>修改需求：</span>
+        <span>{requirement || '未填写具体修改需求'}</span>
+      </div>
+      <div className="flex min-w-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm leading-5 text-slate-400">
+        <Crosshair
+          className="size-4 shrink-0 text-slate-500"
+          aria-hidden="true"
+        />
+        <span className="shrink-0 font-mono text-slate-700">{`<${element.tag}>`}</span>
+        <span className="min-w-0 truncate font-mono">
+          {sourceLocation.filePath}
+          {lineText}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function renderUserMessage(content: string) {
+  const parsedPrompt = parseVisualEditPrompt(content)
+
+  if (parsedPrompt) {
+    // 协议内容继续完整发送给 Agent，聊天区只展示用户友好的摘要。
+    return <VisualEditUserMessage parsedPrompt={parsedPrompt} />
+  }
+
+  return content
+}
+
+function renderGroupedUserMessages(items: Array<{ key: string; content: string }>) {
+  if (items.length === 1) {
+    return renderUserMessage(items[0].content)
+  }
+
+  return (
+    <div className="space-y-4">
+      {items.map((item) => {
+        const renderedMessage = renderUserMessage(item.content)
+
+        return (
+          <div
+            key={item.key}
+            className={typeof renderedMessage === 'string' ? 'whitespace-pre-wrap' : undefined}
+          >
+            {renderedMessage}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function ConversationPanel({
   persistedMessages,
   streamMessages,
@@ -68,7 +133,11 @@ export function ConversationPanel({
   canCode,
   canChat,
   isSubmitting,
+  previewUrl,
+  isVisualEditMode,
+  selectedVisualEditElement,
   onLoadMoreMessages,
+  onVisualEditModeChange,
   onSubmitMessage,
 }: {
   persistedMessages: AppChatMessageInfo[]
@@ -84,7 +153,11 @@ export function ConversationPanel({
   canCode?: boolean
   canChat?: boolean
   isSubmitting?: boolean
+  previewUrl?: string
+  isVisualEditMode?: boolean
+  selectedVisualEditElement?: VisualEditElement | null
   onLoadMoreMessages?: () => Promise<void>
+  onVisualEditModeChange?: (enabled: boolean) => void
   onSubmitMessage: (prompt: string, mode: ChatRequestMode) => boolean
 }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -110,7 +183,7 @@ export function ConversationPanel({
         messageItems.push({
           key: `${group.key}-user`,
           role: 'user',
-          content: group.userItems.map((item) => item.content).join('\n\n'),
+          content: renderGroupedUserMessages(group.userItems),
         })
       }
 
@@ -321,6 +394,10 @@ export function ConversationPanel({
         canCode={canCode}
         canChat={canChat}
         isSubmitting={isSubmitting}
+        previewUrl={previewUrl}
+        isVisualEditMode={isVisualEditMode}
+        selectedVisualEditElement={selectedVisualEditElement}
+        onVisualEditModeChange={onVisualEditModeChange}
         onSubmitMessage={handleSubmitMessage}
       />
     </section>
