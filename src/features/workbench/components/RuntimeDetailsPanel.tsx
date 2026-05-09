@@ -1,5 +1,3 @@
-import { XMarkdown } from '@ant-design/x-markdown'
-import '@ant-design/x-markdown/themes/light.css'
 import { Collapse, Tag } from 'antd'
 import {
   Box,
@@ -22,24 +20,9 @@ import {
   getActivityLineCount,
   type ConversationActivityItem,
   type ConversationActivityStatus,
-  type TaskConversationGroup,
-  type TaskConversationTimelineItem,
 } from '../utils/conversationTimeline'
-import { TaskProgress } from './TaskProgress'
 
 const runtimePanelKey = 'runtime-details'
-
-function isActivityItem(
-  item: TaskConversationTimelineItem,
-): item is Extract<TaskConversationTimelineItem, { type: 'activity' }> {
-  return item.type === 'activity'
-}
-
-function isMessageItem(
-  item: TaskConversationTimelineItem,
-): item is Extract<TaskConversationTimelineItem, { type: 'message' }> {
-  return item.type === 'message'
-}
 
 function getMetadataString(metadata: string | undefined, key: string) {
   const parsedMetadata = parseMessageMetadata(metadata)
@@ -265,10 +248,8 @@ function ActivityDetail({ item }: { item: ConversationActivityItem }) {
 
   return (
     <Collapse
-      key={item.status === 'error' ? `${item.key}-open` : `${item.key}-closed`}
       ghost
       size="small"
-      defaultActiveKey={item.status === 'error' ? [item.key] : undefined}
       expandIconPlacement="end"
       className="mt-2 rounded-md bg-white ring-1 ring-slate-200"
       items={[
@@ -347,28 +328,38 @@ function RuntimeSummary({ items }: { items: ConversationActivityItem[] }) {
   )
 }
 
-function RuntimeDetailsPanel({ items }: { items: ConversationActivityItem[] }) {
+export function RuntimeDetailsPanel({
+  compact,
+  items,
+}: {
+  compact?: boolean
+  items: ConversationActivityItem[]
+}) {
   if (items.length === 0) {
     return null
   }
 
-  const hasError = items.some((item) => item.status === 'error')
-
   return (
     <Collapse
-      key={hasError ? 'runtime-open' : 'runtime-closed'}
       ghost
       size="small"
-      defaultActiveKey={hasError ? [runtimePanelKey] : undefined}
       expandIconPlacement="end"
-      className="rounded-lg bg-slate-50 ring-1 ring-slate-200"
+      className={
+        compact
+          ? 'rounded-md bg-transparent text-slate-500 before:hidden [&_.ant-collapse-content-box]:px-0!'
+          : 'rounded-lg bg-slate-50 ring-1 ring-slate-200'
+      }
       items={[
         {
           key: runtimePanelKey,
-          label: <RuntimeSummary items={items} />,
+          label: compact ? (
+            <span className="text-xs font-medium text-slate-400">查看完整运行明细</span>
+          ) : (
+            <RuntimeSummary items={items} />
+          ),
           classNames: {
-            header: 'px-3! py-2!',
-            body: 'px-3! pb-3! pt-0!',
+            header: compact ? 'px-0! py-1!' : 'px-3! py-2!',
+            body: compact ? 'px-0! pb-0! pt-1!' : 'px-3! pb-3! pt-0!',
           },
           children: (
             <div className="space-y-2">
@@ -383,67 +374,5 @@ function RuntimeDetailsPanel({ items }: { items: ConversationActivityItem[] }) {
         },
       ]}
     />
-  )
-}
-
-function AssistantMarkdownContent({
-  content,
-  streaming,
-}: {
-  content: string
-  streaming?: boolean
-}) {
-  return (
-    <XMarkdown
-      content={content}
-      className="x-markdown-light"
-      openLinksInNewTab
-      escapeRawHtml
-      // hasNextChunk 必须跟随真实流状态，否则不完整 Markdown 可能无法收敛。
-      streaming={{
-        hasNextChunk: Boolean(streaming),
-        enableAnimation: Boolean(streaming),
-        tail: Boolean(streaming),
-      }}
-    />
-  )
-}
-
-export function AssistantTaskContent({
-  group,
-  showProgress,
-  taskStatus,
-  currentStep,
-  isStreaming,
-}: {
-  group: TaskConversationGroup
-  showProgress?: boolean
-  taskStatus?: string
-  currentStep?: string
-  isStreaming?: boolean
-}) {
-  const messageItems = group.timelineItems.filter(isMessageItem)
-  const activityItems = group.timelineItems.filter(isActivityItem)
-
-  return (
-    <div className="space-y-3">
-      {messageItems.map((item) => (
-        <AssistantMarkdownContent
-          key={item.key}
-          content={item.content}
-          streaming={item.streaming}
-        />
-      ))}
-
-      {showProgress && (
-        <TaskProgress
-          status={taskStatus}
-          currentStep={currentStep}
-          isStreaming={isStreaming}
-        />
-      )}
-
-      <RuntimeDetailsPanel items={activityItems} />
-    </div>
   )
 }

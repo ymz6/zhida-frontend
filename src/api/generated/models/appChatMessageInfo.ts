@@ -8,9 +8,8 @@
 export interface AppChatMessageInfo {
   id?: string;
   appId?: string;
-  taskId?: string;
   role?: string;
-  messageType?: string;
+  contentType?: string;
   content?: string;
   metadata?: string;
   createdAt?: string;

@@ -1,10 +1,51 @@
 import type { AppChatMessageInfo } from '@/api/generated/models'
 
 import { parseMessageMetadata, type RuntimeDetailEvent } from '../types'
-import { getMessageTypeLabel, getTaskStepLabel } from './status'
+import { getMessageTypeLabel, getTaskStatusLabel, getTaskStepLabel } from './status'
 
 export interface WorkbenchChatMessageInfo extends AppChatMessageInfo {
+  key?: string
+  taskId?: string
+  messageType?: string
+  blocks?: ChatContentBlock[]
+  pending?: boolean
   streaming?: boolean
+}
+
+export type ConversationActivityStatus = 'running' | 'success' | 'error' | 'info'
+
+export type ChatContentBlock =
+  | { type: 'text'; key?: string; text: string }
+  | {
+      type: 'tool_use'
+      key?: string
+      name: string
+      input: unknown
+      result?: string | null
+      status?: ConversationActivityStatus
+      path?: string
+      summary?: string
+      source?: 'tool' | 'command' | 'validation'
+      logs?: string[]
+      label?: string
+      eventType?: string
+    }
+
+export type ChatMessageMetadata = {
+  previewUrl?: string | null
+  error?: {
+    errorType: string
+    detail: string
+  } | null
+}
+
+export interface WorkbenchChatListItem extends WorkbenchChatMessageInfo {
+  key: string
+  role: 'USER' | 'ASSISTANT'
+  contentType: 'TEXT' | 'BLOCKS'
+  content: string
+  sortValue: number
+  order: number
 }
 
 export type ConversationActivityKind =
@@ -15,8 +56,6 @@ export type ConversationActivityKind =
   | 'run'
   | 'system'
   | 'event'
-
-export type ConversationActivityStatus = 'running' | 'success' | 'error' | 'info'
 
 export interface ConversationActivityItem {
   type: 'activity'
@@ -42,6 +81,7 @@ export interface ConversationActivityItem {
 interface ConversationMessageItem {
   key: string
   content: string
+  blocks?: ChatContentBlock[]
   streaming?: boolean
   sortValue: number
   order: number
@@ -273,6 +313,10 @@ function getRuntimeEventLabel(eventType: string | undefined) {
 
   if (eventType === 'command-log') {
     return '命令日志'
+  }
+
+  if (eventType === 'state') {
+    return '状态'
   }
 
   if (eventType.startsWith('agent.command.')) {
@@ -588,6 +632,15 @@ function appendRuntimeActivity({
   const metadata = detail.metadata
   const kind = getActivityKind(eventType)
   const status = getActivityStatus(eventType, metadata)
+  const stateContent =
+    eventType === 'state'
+      ? [
+          getTaskStatusLabel(detail.status),
+          detail.currentStep ? `当前步骤：${getTaskStepLabel(detail.currentStep)}` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : detail.content
 
   if (kind === 'command') {
     const command =
@@ -697,12 +750,12 @@ function appendRuntimeActivity({
       kind,
       label: getRuntimeEventLabel(eventType),
       title: buildActivityTitle({
-        content: detail.content,
+        content: stateContent,
         eventType,
         kind,
         metadata,
       }),
-      content: normalizeText(detail.content),
+      content: normalizeText(stateContent),
       metadata,
       detailType: detail.messageType,
       eventType,
@@ -826,6 +879,7 @@ export function buildTaskConversationGroups({
       type: 'message',
       key: messageKey,
       content: message.content ?? '',
+      blocks: message.blocks,
       streaming: message.streaming,
       sortValue,
       order: index,
@@ -857,4 +911,170 @@ export function buildTaskConversationGroups({
       userItems: [...group.userItems].sort((a, b) => a.order - b.order),
     }))
     .sort((a, b) => a.order - b.order)
+}
+
+function isChatMessageRole(role: string | undefined): role is 'USER' | 'ASSISTANT' {
+  return role === 'USER' || role === 'ASSISTANT'
+}
+
+function getChatContentType(
+  contentType: string | undefined,
+  role: 'USER' | 'ASSISTANT',
+): 'TEXT' | 'BLOCKS' {
+  if (contentType === 'BLOCKS') {
+    return 'BLOCKS'
+  }
+
+  if (contentType === 'TEXT') {
+    return 'TEXT'
+  }
+
+  return role === 'ASSISTANT' ? 'BLOCKS' : 'TEXT'
+}
+
+function getChatMessageKey(message: WorkbenchChatMessageInfo, index: number) {
+  return message.id ?? message.key ?? `${message.role ?? 'message'}-${message.createdAt ?? index}`
+}
+
+export function parseChatMetadata(metadata: string | undefined): ChatMessageMetadata | null {
+  const parsedMetadata = parseMessageMetadata(metadata)
+
+  if (!parsedMetadata) {
+    return null
+  }
+
+  const previewUrl =
+    typeof parsedMetadata.previewUrl === 'string' ? parsedMetadata.previewUrl : undefined
+  const rawError = parsedMetadata.error
+  const error =
+    rawError && typeof rawError === 'object' && !Array.isArray(rawError)
+      ? (rawError as Record<string, unknown>)
+      : null
+  const detail = typeof error?.detail === 'string' ? error.detail : ''
+  const errorType = typeof error?.errorType === 'string' ? error.errorType : 'UNKNOWN'
+
+  return {
+    previewUrl,
+    error: detail ? { errorType, detail } : null,
+  }
+}
+
+function isChatContentBlock(value: unknown): value is ChatContentBlock {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const block = value as Record<string, unknown>
+
+  if (block.type === 'text') {
+    return typeof block.text === 'string'
+  }
+
+  if (block.type === 'tool_use') {
+    return typeof block.name === 'string'
+  }
+
+  return false
+}
+
+export function parseBlocks(
+  message: Pick<WorkbenchChatMessageInfo, 'blocks' | 'content' | 'contentType'>,
+) {
+  // 流式阶段会先把 SSE 运行事件投影成 blocks，保证生成中和最终消息使用同一套渲染路径。
+  if (message.blocks?.length && message.blocks.every(isChatContentBlock)) {
+    return message.blocks
+  }
+
+  if (message.contentType !== 'BLOCKS') {
+    return [{ type: 'text', text: message.content ?? '' }] satisfies ChatContentBlock[]
+  }
+
+  try {
+    const parsed = JSON.parse(message.content ?? '')
+
+    if (Array.isArray(parsed) && parsed.every(isChatContentBlock)) {
+      return parsed
+    }
+  } catch {
+    // 后端 BLOCKS 序列化异常时降级为纯文本，避免聊天区整页崩溃。
+  }
+
+  return [{ type: 'text', text: message.content ?? '' }] satisfies ChatContentBlock[]
+}
+
+export function buildWorkbenchChatMessages({
+  persistedMessages,
+  streamMessages,
+}: {
+  persistedMessages: AppChatMessageInfo[]
+  streamMessages: WorkbenchChatMessageInfo[]
+}) {
+  const seenMessageKeys = new Set<string>()
+  const buildChatListItem = (
+    message: WorkbenchChatMessageInfo,
+    index: number,
+  ): WorkbenchChatListItem | null => {
+    if (!isChatMessageRole(message.role)) {
+      return null
+    }
+
+    const content = message.content ?? ''
+    const hasBlocks = Boolean(message.blocks?.length)
+
+    if (!content && !hasBlocks && !message.streaming && !message.pending) {
+      return null
+    }
+
+    const key = getChatMessageKey(message, index)
+
+    if (seenMessageKeys.has(key)) {
+      return null
+    }
+
+    seenMessageKeys.add(key)
+
+    return {
+      ...message,
+      key,
+      role: message.role,
+      contentType: getChatContentType(message.contentType, message.role),
+      content,
+      sortValue: getEventSortValue(message.createdAt, index),
+      order: index,
+    }
+  }
+
+  const persistedItems = persistedMessages
+    .map((message, index) => buildChatListItem(message, index))
+    .filter((message): message is WorkbenchChatListItem => Boolean(message))
+    .sort((firstMessage, secondMessage) => {
+      if (firstMessage.sortValue !== secondMessage.sortValue) {
+        return firstMessage.sortValue - secondMessage.sortValue
+      }
+
+      return firstMessage.order - secondMessage.order
+    })
+
+  const streamOffset = persistedMessages.length
+  const streamItems = streamMessages
+    .map((message, index) => buildChatListItem(message, streamOffset + index))
+    .filter((message): message is WorkbenchChatListItem => Boolean(message))
+    // 实时草稿会被 SSE 事件时间反复更新，不能参与全局 createdAt 排序，否则气泡会跳动。
+    .sort((firstMessage, secondMessage) => firstMessage.order - secondMessage.order)
+
+  return [...persistedItems, ...streamItems]
+}
+
+export function buildRuntimeActivityItems(runtimeDetails: RuntimeDetailEvent[]) {
+  return buildTaskConversationGroups({
+    persistedMessages: [],
+    runtimeDetails,
+    streamMessages: [],
+  })
+    .flatMap((group) => group.timelineItems)
+    .filter(
+      (item): item is ConversationActivityItem =>
+        item.type === 'activity' && item.kind !== 'system',
+    )
+    .sort(sortTimelineItems)
 }

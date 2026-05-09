@@ -61,6 +61,7 @@ export interface TaskStreamEvent {
   messageId?: string
   role?: AppChatMessageRole
   messageType?: AppChatMessageType
+  contentType?: 'TEXT' | 'BLOCKS' | string
   content?: string
   metadata?: string
   createdAt?: string

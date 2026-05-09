@@ -5,9 +5,8 @@ import { Bot, Crosshair, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 
-import type { RuntimeDetailEvent } from '../types'
 import {
-  buildTaskConversationGroups,
+  buildWorkbenchChatMessages,
   type WorkbenchChatMessageInfo,
 } from '../utils/conversationTimeline'
 import {
@@ -15,9 +14,8 @@ import {
   type ParsedVisualEditPrompt,
   type VisualEditElement,
 } from '../utils/visualEdit'
-import { AssistantTaskContent } from './AssistantTaskContent'
+import { AssistantMessageContent } from './AssistantMessageContent'
 import { ConversationComposer } from './ConversationComposer'
-import { TaskProgress } from './TaskProgress'
 
 const roles = {
   user: {
@@ -96,37 +94,9 @@ function renderUserMessage(content: string) {
   return content
 }
 
-function renderGroupedUserMessages(items: Array<{ key: string; content: string }>) {
-  if (items.length === 1) {
-    return renderUserMessage(items[0].content)
-  }
-
-  return (
-    <div className="space-y-4">
-      {items.map((item) => {
-        const renderedMessage = renderUserMessage(item.content)
-
-        return (
-          <div
-            key={item.key}
-            className={typeof renderedMessage === 'string' ? 'whitespace-pre-wrap' : undefined}
-          >
-            {renderedMessage}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 export function ConversationPanel({
   persistedMessages,
   streamMessages,
-  runtimeDetails,
-  taskStatus,
-  currentStep,
-  currentTaskId,
-  isStreaming,
   isLoadingMessages,
   hasMoreMessages,
   isLoadingMoreMessages,
@@ -142,11 +112,6 @@ export function ConversationPanel({
 }: {
   persistedMessages: AppChatMessageInfo[]
   streamMessages: WorkbenchChatMessageInfo[]
-  runtimeDetails: RuntimeDetailEvent[]
-  taskStatus?: string
-  currentStep?: string
-  currentTaskId?: string
-  isStreaming?: boolean
   isLoadingMessages?: boolean
   hasMoreMessages?: boolean
   isLoadingMoreMessages?: boolean
@@ -171,63 +136,31 @@ export function ConversationPanel({
   const isRequestingMoreRef = useRef(false)
 
   const items = useMemo(() => {
-    const groups = buildTaskConversationGroups({
+    const chatMessages = buildWorkbenchChatMessages({
       persistedMessages,
-      runtimeDetails,
       streamMessages,
     })
     const messageItems: Array<{ key: string; role: string; content: ReactNode }> = []
 
-    groups.forEach((group) => {
-      if (group.userItems.length > 0) {
+    chatMessages.forEach((chatMessage) => {
+      if (chatMessage.role === 'USER') {
         messageItems.push({
-          key: `${group.key}-user`,
+          key: chatMessage.key,
           role: 'user',
-          content: renderGroupedUserMessages(group.userItems),
+          content: renderUserMessage(chatMessage.content),
         })
+        return
       }
 
-      if (group.timelineItems.length > 0 || group.taskId === currentTaskId) {
-        messageItems.push({
-          key: `${group.key}-assistant`,
-          role: 'assistant',
-          content: (
-            <AssistantTaskContent
-              group={group}
-              showProgress={group.taskId === currentTaskId}
-              taskStatus={taskStatus}
-              currentStep={currentStep}
-              isStreaming={isStreaming}
-            />
-          ),
-        })
-      }
+      messageItems.push({
+        key: chatMessage.key,
+        role: 'assistant',
+        content: <AssistantMessageContent message={chatMessage} />,
+      })
     })
 
-    if (messageItems.length === 0 && (taskStatus || currentStep || isStreaming)) {
-      messageItems.push({
-        key: 'task-progress',
-        role: 'assistant',
-        content: (
-          <TaskProgress
-            status={taskStatus}
-            currentStep={currentStep}
-            isStreaming={isStreaming}
-          />
-        ),
-      })
-    }
-
     return messageItems
-  }, [
-    currentStep,
-    currentTaskId,
-    isStreaming,
-    persistedMessages,
-    runtimeDetails,
-    streamMessages,
-    taskStatus,
-  ])
+  }, [persistedMessages, streamMessages])
 
   const loadMoreMessages = useCallback(async () => {
     const scrollContainer = scrollContainerRef.current

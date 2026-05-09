@@ -96,6 +96,9 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
 
   const handleStreamSettled = useCallback(
     ({ mode, status }: { mode: ChatRequestMode; status?: string }) => {
+      // 本轮聊天消息已经由 SSE 完整推送，结束时只标记过期，避免主动 refetch 造成对话区闪动。
+      void queryClient.invalidateQueries({ queryKey: messagesQueryKey, refetchType: 'none' })
+
       if (mode === ChatRequestMode.CHAT) {
         return
       }
@@ -104,10 +107,11 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
       void queryClient.invalidateQueries({ queryKey: ['/apps/mine'] })
 
       if (status !== 'FAILED') {
+        // 预览产物通常在任务 SUCCESS / SSE 收尾后才稳定，过早刷新会命中旧页面。
         setPreviewReloadKey((key) => key + 1)
       }
     },
-    [appId],
+    [appId, messagesQueryKey],
   )
 
   const appChatStream = useAppChatStream({
@@ -130,17 +134,17 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
         appId: streamMessage.appId,
         taskId: streamMessage.taskId,
         role: streamMessage.role,
-        messageType: streamMessage.messageType,
+        contentType: streamMessage.contentType,
         content: streamMessage.content,
+        blocks: streamMessage.blocks,
         metadata: streamMessage.metadata,
         createdAt: streamMessage.createdAt,
+        pending: streamMessage.pending,
         streaming: streamMessage.streaming,
       })),
     [appChatStream.streamMessages],
   )
 
-  const effectiveTaskStatus = appChatStream.status
-  const effectiveTaskStep = appChatStream.currentStep
   const isTaskRunning = appChatStream.isStreaming || hasRunningAppStatus(appDetail)
   const canCode = Boolean(
     appDetail?.id &&
@@ -478,15 +482,6 @@ export function AppWorkbenchPage({ appId }: { appId: string }) {
                   key={appId}
                   persistedMessages={persistedMessages}
                   streamMessages={streamMessages}
-                  runtimeDetails={appChatStream.runtimeDetails}
-                  taskStatus={effectiveTaskStatus}
-                  currentStep={effectiveTaskStep}
-                  currentTaskId={
-                    isTaskRunning
-                      ? (appChatStream.currentRunId ?? appDetail?.latestTaskId)
-                      : undefined
-                  }
-                  isStreaming={appChatStream.isStreaming}
                   isLoadingMessages={messagesQuery.isLoading}
                   hasMoreMessages={messagesQuery.hasNextPage}
                   isLoadingMoreMessages={messagesQuery.isFetchingNextPage}
