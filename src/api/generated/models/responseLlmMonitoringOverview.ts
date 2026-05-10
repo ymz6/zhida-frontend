@@ -4,10 +4,10 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { MonitoringDashboard } from './monitoringDashboard';
+import type { LlmMonitoringOverview } from './llmMonitoringOverview';
 
-export interface ResponseMonitoringDashboard {
+export interface ResponseLlmMonitoringOverview {
   code?: number;
   message?: string;
-  data?: MonitoringDashboard;
+  data?: LlmMonitoringOverview;
 }

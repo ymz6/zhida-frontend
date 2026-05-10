@@ -5,7 +5,6 @@
  * OpenAPI spec version: v0
  */
 import {
-  useMutation,
   useQuery,
   useQueryClient
 } from '@tanstack/react-query';
@@ -14,22 +13,21 @@ import type {
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
   InvalidateOptions,
-  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
-  GetMonitoringDashboardParams,
-  MonitoringQueryRequest,
-  ResponseMonitoringDashboard,
-  ResponseMonitoringQueryResult
+  GetLlmMonitoringOverviewParams,
+  GetLlmTokenUsageTrendParams,
+  ListLlmCallsParams,
+  ResponseLlmMonitoringOverview,
+  ResponseLlmTokenUsageTrend,
+  ResponsePageResultLlmCallLogInfo
 } from '../models';
 
 import { customInstance } from '../../mutator/custom-instance';
@@ -40,71 +38,14 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
-export const queryMonitoring = (
-    monitoringQueryRequest: MonitoringQueryRequest,
+export const getLlmTokenUsageTrend = (
+    params: GetLlmTokenUsageTrendParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
-      return customInstance<ResponseMonitoringQueryResult>(
-      {url: `/admin/monitoring/query`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: monitoringQueryRequest, signal
-    },
-      options);
-    }
-
-
-
-export const getQueryMonitoringMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof queryMonitoring>>, TError,{data: MonitoringQueryRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof queryMonitoring>>, TError,{data: MonitoringQueryRequest}, TContext> => {
-
-const mutationKey = ['queryMonitoring'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof queryMonitoring>>, {data: MonitoringQueryRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  queryMonitoring(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type QueryMonitoringMutationResult = NonNullable<Awaited<ReturnType<typeof queryMonitoring>>>
-    export type QueryMonitoringMutationBody = MonitoringQueryRequest
-    export type QueryMonitoringMutationError = unknown
-
-    export const useQueryMonitoring = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof queryMonitoring>>, TError,{data: MonitoringQueryRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof queryMonitoring>>,
-        TError,
-        {data: MonitoringQueryRequest},
-        TContext
-      > => {
-      return useMutation(getQueryMonitoringMutationOptions(options), queryClient);
-    }
-    export const getMonitoringDashboard = (
-    params: GetMonitoringDashboardParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-
-
-      return customInstance<ResponseMonitoringDashboard>(
-      {url: `/admin/monitoring/dashboard`, method: 'GET',
+      return customInstance<ResponseLlmTokenUsageTrend>(
+      {url: `/admin/monitoring/token-usage-trend`, method: 'GET',
         params, signal
     },
       options);
@@ -113,66 +54,66 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-export const getGetMonitoringDashboardQueryKey = (params?: GetMonitoringDashboardParams,) => {
+export const getGetLlmTokenUsageTrendQueryKey = (params?: GetLlmTokenUsageTrendParams,) => {
     return [
-    `/admin/monitoring/dashboard`, ...(params ? [params] : [])
+    `/admin/monitoring/token-usage-trend`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetMonitoringDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getMonitoringDashboard>>, TError = unknown>(params: GetMonitoringDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonitoringDashboard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetLlmTokenUsageTrendQueryOptions = <TData = Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError = unknown>(params: GetLlmTokenUsageTrendParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMonitoringDashboardQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getGetLlmTokenUsageTrendQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMonitoringDashboard>>> = ({ signal }) => getMonitoringDashboard(params, requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>> = ({ signal }) => getLlmTokenUsageTrend(params, requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMonitoringDashboard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetMonitoringDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getMonitoringDashboard>>>
-export type GetMonitoringDashboardQueryError = unknown
+export type GetLlmTokenUsageTrendQueryResult = NonNullable<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>>
+export type GetLlmTokenUsageTrendQueryError = unknown
 
 
-export function useGetMonitoringDashboard<TData = Awaited<ReturnType<typeof getMonitoringDashboard>>, TError = unknown>(
- params: GetMonitoringDashboardParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonitoringDashboard>>, TError, TData>> & Pick<
+export function useGetLlmTokenUsageTrend<TData = Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError = unknown>(
+ params: GetLlmTokenUsageTrendParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getMonitoringDashboard>>,
+          Awaited<ReturnType<typeof getLlmTokenUsageTrend>>,
           TError,
-          Awaited<ReturnType<typeof getMonitoringDashboard>>
+          Awaited<ReturnType<typeof getLlmTokenUsageTrend>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMonitoringDashboard<TData = Awaited<ReturnType<typeof getMonitoringDashboard>>, TError = unknown>(
- params: GetMonitoringDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonitoringDashboard>>, TError, TData>> & Pick<
+export function useGetLlmTokenUsageTrend<TData = Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError = unknown>(
+ params: GetLlmTokenUsageTrendParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getMonitoringDashboard>>,
+          Awaited<ReturnType<typeof getLlmTokenUsageTrend>>,
           TError,
-          Awaited<ReturnType<typeof getMonitoringDashboard>>
+          Awaited<ReturnType<typeof getLlmTokenUsageTrend>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMonitoringDashboard<TData = Awaited<ReturnType<typeof getMonitoringDashboard>>, TError = unknown>(
- params: GetMonitoringDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonitoringDashboard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetLlmTokenUsageTrend<TData = Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError = unknown>(
+ params: GetLlmTokenUsageTrendParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetMonitoringDashboard<TData = Awaited<ReturnType<typeof getMonitoringDashboard>>, TError = unknown>(
- params: GetMonitoringDashboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMonitoringDashboard>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetLlmTokenUsageTrend<TData = Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError = unknown>(
+ params: GetLlmTokenUsageTrendParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetMonitoringDashboardQueryOptions(params,options)
+  const queryOptions = getGetLlmTokenUsageTrendQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -180,26 +121,238 @@ export function useGetMonitoringDashboard<TData = Awaited<ReturnType<typeof getM
 }
 
 
-export const invalidateGetMonitoringDashboard = async (
- queryClient: QueryClient, params: GetMonitoringDashboardParams, options?: InvalidateOptions
+export const invalidateGetLlmTokenUsageTrend = async (
+ queryClient: QueryClient, params: GetLlmTokenUsageTrendParams, options?: InvalidateOptions
   ): Promise<QueryClient> => {
 
-  await queryClient.invalidateQueries({ queryKey: getGetMonitoringDashboardQueryKey(params) }, options);
+  await queryClient.invalidateQueries({ queryKey: getGetLlmTokenUsageTrendQueryKey(params) }, options);
 
   return queryClient;
 }
 
-export const useSetGetMonitoringDashboardQueryData = () => {
+export const useSetGetLlmTokenUsageTrendQueryData = () => {
   const queryClient = useQueryClient();
-  return (params: GetMonitoringDashboardParams,updater: Awaited<ReturnType<typeof getMonitoringDashboard>> | undefined | ((old: Awaited<ReturnType<typeof getMonitoringDashboard>> | undefined) => Awaited<ReturnType<typeof getMonitoringDashboard>> | undefined)) => {
-    queryClient.setQueryData(getGetMonitoringDashboardQueryKey(params), updater);
+  return (params: GetLlmTokenUsageTrendParams,updater: Awaited<ReturnType<typeof getLlmTokenUsageTrend>> | undefined | ((old: Awaited<ReturnType<typeof getLlmTokenUsageTrend>> | undefined) => Awaited<ReturnType<typeof getLlmTokenUsageTrend>> | undefined)) => {
+    queryClient.setQueryData(getGetLlmTokenUsageTrendQueryKey(params), updater);
   };
 }
 
-export const useGetGetMonitoringDashboardQueryData = () => {
+export const useGetGetLlmTokenUsageTrendQueryData = () => {
   const queryClient = useQueryClient();
-  return (params: GetMonitoringDashboardParams,) =>
-    queryClient.getQueryData<Awaited<ReturnType<typeof getMonitoringDashboard>>>(getGetMonitoringDashboardQueryKey(params));
+  return (params: GetLlmTokenUsageTrendParams,) =>
+    queryClient.getQueryData<Awaited<ReturnType<typeof getLlmTokenUsageTrend>>>(getGetLlmTokenUsageTrendQueryKey(params));
+}
+
+
+export const getLlmMonitoringOverview = (
+    params: GetLlmMonitoringOverviewParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ResponseLlmMonitoringOverview>(
+      {url: `/admin/monitoring/overview`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetLlmMonitoringOverviewQueryKey = (params?: GetLlmMonitoringOverviewParams,) => {
+    return [
+    `/admin/monitoring/overview`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetLlmMonitoringOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError = unknown>(params: GetLlmMonitoringOverviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLlmMonitoringOverviewQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLlmMonitoringOverview>>> = ({ signal }) => getLlmMonitoringOverview(params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetLlmMonitoringOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getLlmMonitoringOverview>>>
+export type GetLlmMonitoringOverviewQueryError = unknown
+
+
+export function useGetLlmMonitoringOverview<TData = Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError = unknown>(
+ params: GetLlmMonitoringOverviewParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLlmMonitoringOverview>>,
+          TError,
+          Awaited<ReturnType<typeof getLlmMonitoringOverview>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetLlmMonitoringOverview<TData = Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError = unknown>(
+ params: GetLlmMonitoringOverviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLlmMonitoringOverview>>,
+          TError,
+          Awaited<ReturnType<typeof getLlmMonitoringOverview>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetLlmMonitoringOverview<TData = Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError = unknown>(
+ params: GetLlmMonitoringOverviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetLlmMonitoringOverview<TData = Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError = unknown>(
+ params: GetLlmMonitoringOverviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLlmMonitoringOverview>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetLlmMonitoringOverviewQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+export const invalidateGetLlmMonitoringOverview = async (
+ queryClient: QueryClient, params: GetLlmMonitoringOverviewParams, options?: InvalidateOptions
+  ): Promise<QueryClient> => {
+
+  await queryClient.invalidateQueries({ queryKey: getGetLlmMonitoringOverviewQueryKey(params) }, options);
+
+  return queryClient;
+}
+
+export const useSetGetLlmMonitoringOverviewQueryData = () => {
+  const queryClient = useQueryClient();
+  return (params: GetLlmMonitoringOverviewParams,updater: Awaited<ReturnType<typeof getLlmMonitoringOverview>> | undefined | ((old: Awaited<ReturnType<typeof getLlmMonitoringOverview>> | undefined) => Awaited<ReturnType<typeof getLlmMonitoringOverview>> | undefined)) => {
+    queryClient.setQueryData(getGetLlmMonitoringOverviewQueryKey(params), updater);
+  };
+}
+
+export const useGetGetLlmMonitoringOverviewQueryData = () => {
+  const queryClient = useQueryClient();
+  return (params: GetLlmMonitoringOverviewParams,) =>
+    queryClient.getQueryData<Awaited<ReturnType<typeof getLlmMonitoringOverview>>>(getGetLlmMonitoringOverviewQueryKey(params));
+}
+
+
+export const listLlmCalls = (
+    params: ListLlmCallsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ResponsePageResultLlmCallLogInfo>(
+      {url: `/admin/monitoring/llm-calls`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getListLlmCallsQueryKey = (params?: ListLlmCallsParams,) => {
+    return [
+    `/admin/monitoring/llm-calls`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListLlmCallsQueryOptions = <TData = Awaited<ReturnType<typeof listLlmCalls>>, TError = unknown>(params: ListLlmCallsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLlmCalls>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLlmCallsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLlmCalls>>> = ({ signal }) => listLlmCalls(params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLlmCalls>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListLlmCallsQueryResult = NonNullable<Awaited<ReturnType<typeof listLlmCalls>>>
+export type ListLlmCallsQueryError = unknown
+
+
+export function useListLlmCalls<TData = Awaited<ReturnType<typeof listLlmCalls>>, TError = unknown>(
+ params: ListLlmCallsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLlmCalls>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLlmCalls>>,
+          TError,
+          Awaited<ReturnType<typeof listLlmCalls>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListLlmCalls<TData = Awaited<ReturnType<typeof listLlmCalls>>, TError = unknown>(
+ params: ListLlmCallsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLlmCalls>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLlmCalls>>,
+          TError,
+          Awaited<ReturnType<typeof listLlmCalls>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListLlmCalls<TData = Awaited<ReturnType<typeof listLlmCalls>>, TError = unknown>(
+ params: ListLlmCallsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLlmCalls>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListLlmCalls<TData = Awaited<ReturnType<typeof listLlmCalls>>, TError = unknown>(
+ params: ListLlmCallsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listLlmCalls>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListLlmCallsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+export const invalidateListLlmCalls = async (
+ queryClient: QueryClient, params: ListLlmCallsParams, options?: InvalidateOptions
+  ): Promise<QueryClient> => {
+
+  await queryClient.invalidateQueries({ queryKey: getListLlmCallsQueryKey(params) }, options);
+
+  return queryClient;
+}
+
+export const useSetListLlmCallsQueryData = () => {
+  const queryClient = useQueryClient();
+  return (params: ListLlmCallsParams,updater: Awaited<ReturnType<typeof listLlmCalls>> | undefined | ((old: Awaited<ReturnType<typeof listLlmCalls>> | undefined) => Awaited<ReturnType<typeof listLlmCalls>> | undefined)) => {
+    queryClient.setQueryData(getListLlmCallsQueryKey(params), updater);
+  };
+}
+
+export const useGetListLlmCallsQueryData = () => {
+  const queryClient = useQueryClient();
+  return (params: ListLlmCallsParams,) =>
+    queryClient.getQueryData<Awaited<ReturnType<typeof listLlmCalls>>>(getListLlmCallsQueryKey(params));
 }
 
 

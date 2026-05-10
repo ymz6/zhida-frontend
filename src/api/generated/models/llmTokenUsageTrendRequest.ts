@@ -5,7 +5,8 @@
  * OpenAPI spec version: v0
  */
 
-export interface MonitoringPoint {
-  time?: string;
-  value?: number;
+export interface LlmTokenUsageTrendRequest {
+  startTime?: string;
+  endTime?: string;
+  stepSeconds?: string;
 }

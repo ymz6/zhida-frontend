@@ -5,7 +5,7 @@
  * OpenAPI spec version: v0
  */
 
-export interface MonitoringDashboardRequest {
-  startTime?: string;
-  endTime?: string;
+export interface LlmTokenUsageTrendPoint {
+  time?: string;
+  value?: number;
 }

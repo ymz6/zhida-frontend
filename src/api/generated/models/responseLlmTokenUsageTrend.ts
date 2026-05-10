@@ -4,10 +4,10 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { MonitoringQueryResult } from './monitoringQueryResult';
+import type { LlmTokenUsageTrend } from './llmTokenUsageTrend';
 
-export interface ResponseMonitoringQueryResult {
+export interface ResponseLlmTokenUsageTrend {
   code?: number;
   message?: string;
-  data?: MonitoringQueryResult;
+  data?: LlmTokenUsageTrend;
 }

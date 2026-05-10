@@ -5,4 +5,7 @@
  * OpenAPI spec version: v0
  */
 
-export type MonitoringTableQueryFilters = {[key: string]: unknown};
+export interface LlmMonitoringOverviewRequest {
+  startTime?: string;
+  endTime?: string;
+}
