@@ -162,15 +162,15 @@ export function HomePage() {
           Create wonderful code, build a wonderful world
         </p>
 
-        <div className="group relative mt-9 w-full max-w-3xl overflow-hidden rounded-4xl p-0.5 shadow-xl shadow-sky-900/5 transition-all duration-300">
-          {/* Static Border (Visible when not focused) */}
-          <div className="pointer-events-none absolute inset-0 rounded-4xl border border-slate-200/60 transition-opacity duration-300 group-focus-within:opacity-0" />
+        <div className="group relative mt-9 w-full max-w-3xl overflow-hidden rounded-4xl bg-slate-200/60 p-0.5 shadow-xl shadow-sky-900/5 transition-all duration-300 focus-within:shadow-2xl focus-within:shadow-sky-500/10">
+          {/* 彩虹层只露出外层 2px padding，内侧由纯白输入面板完全遮住。 */}
+          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 ease-out group-focus-within:opacity-100">
+            <div className="absolute top-1/2 left-1/2 aspect-square w-[120%] -translate-x-1/2 -translate-y-1/2">
+              <div className="h-full w-full animate-[spin_4.5s_linear_infinite] bg-[conic-gradient(from_0deg_at_50%_50%,#38bdf8,#6366f1,#d946ef,#f97316,#facc15,#22c55e,#06b6d4,#38bdf8)]" />
+            </div>
+          </div>
 
-          {/* Animated Full Rainbow Flow (Visible on focus) */}
-          <div className="pointer-events-none absolute -inset-full animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg_at_50%_50%,#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#a855f7,#ec4899,#ef4444)] opacity-0 transition-opacity duration-700 ease-in-out group-focus-within:opacity-100" />
-
-          {/* Inner Content Area */}
-          <div className="relative h-full w-full rounded-[calc(2rem-2px)] bg-white/95 px-4 py-3 text-left backdrop-blur-xl">
+          <div className="relative z-10 h-full w-full rounded-[calc(2rem-2px)] bg-white px-4 py-3 text-left">
             <label
               htmlFor="home-app-prompt"
               className="sr-only"
