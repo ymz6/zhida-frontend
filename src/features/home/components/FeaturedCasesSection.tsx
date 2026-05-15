@@ -1,24 +1,32 @@
-import { Card } from 'antd'
 import { Link } from '@tanstack/react-router'
-import { ArrowUpRight, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Star } from 'lucide-react'
+
+import { PublicCaseCard } from '@/features/cases-square/components/PublicCaseCard'
+import type { PublicCaseCardData } from '@/features/cases-square/components/PublicCaseCard'
 
 const featuredCases = [
   {
+    id: 1,
     title: '会员运营后台',
-    description: '订单、积分、活动配置一站式管理',
-    colorClass: 'bg-sky-100',
+    authorName: 'Krd168409708',
+    createdAt: '2026-03-08',
+    isFeatured: true,
   },
   {
+    id: 2,
     title: '企业官网',
-    description: '服务介绍、案例展示、团队信息整合',
-    colorClass: 'bg-emerald-100',
+    authorName: 'Luna',
+    createdAt: '2026-03-16',
+    isFeatured: true,
   },
   {
+    id: 3,
     title: '数据看板',
-    description: '关键指标、趋势图表、业务概览',
-    colorClass: 'bg-amber-100',
+    authorName: 'Ming',
+    createdAt: '2026-04-02',
+    isFeatured: true,
   },
-]
+] satisfies PublicCaseCardData[]
 
 export function FeaturedCasesSection() {
   return (
@@ -26,9 +34,9 @@ export function FeaturedCasesSection() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="flex items-center text-2xl font-bold text-slate-950">
-            <span className="mr-3 flex size-9 items-center justify-center rounded-full bg-sky-100 text-sky-600">
-              <Sparkles
-                className="size-5"
+            <span className="mr-3 flex size-9 items-center justify-center rounded-full bg-yellow-100 text-yellow-500">
+              <Star
+                className="size-5 fill-yellow-400"
                 aria-hidden="true"
               />
             </span>
@@ -38,7 +46,7 @@ export function FeaturedCasesSection() {
         </div>
 
         <Link
-          to="/"
+          to="/cases"
           className="inline-flex h-10 w-fit items-center gap-2 rounded-full border border-sky-100 bg-white/80 px-4 text-sm font-medium text-sky-700 shadow-sm shadow-sky-900/5"
         >
           案例广场
@@ -51,16 +59,10 @@ export function FeaturedCasesSection() {
 
       <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {featuredCases.map((appCase) => (
-          <Card
-            key={appCase.title}
-            variant="borderless"
-            className="overflow-hidden rounded-xl! shadow-sm shadow-slate-900/5"
-          >
-            {/* 先用纯色块占位，等卡片设计确定后再替换为真实案例封面。 */}
-            <div className={`h-36 rounded-lg ${appCase.colorClass}`} />
-            <h3 className="mt-4 text-base font-semibold text-slate-950">{appCase.title}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">{appCase.description}</p>
-          </Card>
+          <PublicCaseCard
+            key={appCase.id}
+            appCase={appCase}
+          />
         ))}
       </div>
     </section>

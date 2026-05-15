@@ -97,8 +97,7 @@ export function PublicCasesPreviewSection() {
                 }
 
                 void navigate({
-                  to: '/cases/$caseId',
-                  params: { caseId: currentCase.id },
+                  to: '/cases',
                 })
               }}
             />

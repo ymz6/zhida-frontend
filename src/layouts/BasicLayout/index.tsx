@@ -5,7 +5,7 @@ import { useAuthSessionStore } from '@/stores/auth-session'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { App, Avatar, Button, Dropdown, Layout, Menu } from 'antd'
 import type { MenuProps } from 'antd'
-import { ChevronDown, FileClock, LogOut, ShieldCheck, User } from 'lucide-react'
+import { ChevronDown, LogOut, ShieldCheck, User } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -85,11 +85,6 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
       label: '个人中心',
       icon: <User className="size-4" />,
     },
-    {
-      key: 'my-cases',
-      label: '我的投稿',
-      icon: <FileClock className="size-4" />,
-    },
     isAdmin
       ? {
           key: 'admin',
@@ -109,11 +104,6 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
   const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'profile') {
       void navigate({ to: '/profile' })
-      return
-    }
-
-    if (key === 'my-cases') {
-      void navigate({ to: '/cases/mine' })
       return
     }
 

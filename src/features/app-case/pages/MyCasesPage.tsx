@@ -158,8 +158,7 @@ export function MyCasesPage() {
               type="primary"
               onClick={() =>
                 void navigate({
-                  to: '/cases/$caseId',
-                  params: { caseId: record.id as string },
+                  to: '/cases',
                 })
               }
             >
