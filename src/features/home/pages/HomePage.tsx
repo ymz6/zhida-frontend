@@ -1,89 +1,24 @@
-import { useCreateApp } from '@/api/generated/endpoints/app'
-import { PublicCasesPreviewSection } from '@/features/app-case/components/PublicCasesPreviewSection'
-import { saveInitialAppPrompt } from '@/features/workbench/utils/initialPrompt'
 import { useAuthSessionStore } from '@/stores/auth-session'
-import { useNavigate } from '@tanstack/react-router'
 import { App, Button, Input } from 'antd'
 import { ArrowUp, Compass, Sparkles } from 'lucide-react'
-import { useEffect, useState } from 'react'
-
-import { MyAppsSection } from '../components/MyAppsSection'
+import { useState } from 'react'
+import { FeaturedCasesSection } from '../components/FeaturedCasesSection'
+import { useTypewriterPlaceholder } from '../hooks/useTypewriterPlaceholder'
 
 const { TextArea } = Input
 
 const typewriterPrompts = [
   '创建一个咖啡店会员管理后台，包含订单、积分和活动配置',
   '生成一个企业官网，展示服务、案例、团队和联系方式',
-  '做一个知识库助手，可以整理文档、检索答案和生成摘要',
 ]
-
-function useTypewriterPlaceholder(prompts: readonly string[]) {
-  const [promptPlaceholder, setPromptPlaceholder] = useState('')
-
-  useEffect(() => {
-    if (prompts.length === 0) {
-      setPromptPlaceholder('')
-      return
-    }
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    if (prefersReducedMotion) {
-      setPromptPlaceholder(prompts[0])
-      return
-    }
-
-    let promptIndex = 0
-    let charIndex = 0
-    let isDeleting = false
-    let timeoutId: ReturnType<typeof window.setTimeout>
-
-    const tick = () => {
-      const prompt = prompts[promptIndex]
-      const nextText = prompt.slice(0, charIndex)
-
-      setPromptPlaceholder(nextText)
-
-      if (!isDeleting && charIndex < prompt.length) {
-        charIndex += 1
-        timeoutId = window.setTimeout(tick, 70)
-        return
-      }
-
-      if (!isDeleting && charIndex === prompt.length) {
-        isDeleting = true
-        timeoutId = window.setTimeout(tick, 1600)
-        return
-      }
-
-      if (isDeleting && charIndex > 0) {
-        charIndex -= 1
-        timeoutId = window.setTimeout(tick, 28)
-        return
-      }
-
-      isDeleting = false
-      promptIndex = (promptIndex + 1) % prompts.length
-      timeoutId = window.setTimeout(tick, 360)
-    }
-
-    timeoutId = window.setTimeout(tick, 300)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [prompts])
-
-  return promptPlaceholder
-}
 
 export function HomePage() {
   const promptPlaceholder = useTypewriterPlaceholder(typewriterPrompts)
-  const navigate = useNavigate()
   const { message } = App.useApp()
-  const createAppMutation = useCreateApp()
   const isAuthenticated = useAuthSessionStore((state) => Boolean(state.accessToken))
   const [prompt, setPrompt] = useState('')
 
-  const handleCreateApp = async () => {
+  const handleCreateApp = () => {
     const nextPrompt = prompt.trim()
 
     if (!nextPrompt) {
@@ -96,28 +31,8 @@ export function HomePage() {
       return
     }
 
-    try {
-      const response = await createAppMutation.mutateAsync({
-        data: {
-          prompt: nextPrompt,
-        },
-      })
-      const appId = response.data?.appId
-
-      if (!appId) {
-        message.error('后端未返回应用 ID')
-        return
-      }
-
-      saveInitialAppPrompt(appId, nextPrompt)
-
-      void navigate({
-        to: '/workbench/$appId',
-        params: { appId },
-      })
-    } catch (error) {
-      message.error((error as { message?: string })?.message ?? '创建应用失败')
-    }
+    // 后端创建逻辑已移除，避免首页继续触发创建应用请求。
+    message.info('应用创建接口暂未接入')
   }
 
   return (
@@ -193,9 +108,7 @@ export function HomePage() {
                 htmlType="button"
                 type="primary"
                 shape="circle"
-                loading={createAppMutation.isPending}
-                disabled={createAppMutation.isPending}
-                onClick={() => void handleCreateApp()}
+                onClick={handleCreateApp}
                 aria-label="生成应用"
                 icon={
                   <ArrowUp
@@ -209,10 +122,8 @@ export function HomePage() {
           </div>
         </div>
       </section>
-
-      {isAuthenticated && <MyAppsSection />}
-
-      <PublicCasesPreviewSection />
+      {/* 精选案例 */}
+      <FeaturedCasesSection />
     </main>
   )
 }
