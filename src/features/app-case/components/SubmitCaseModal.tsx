@@ -11,6 +11,9 @@ interface SubmitCaseFormValues {
   summary: string
 }
 
+/**
+ * @deprecated 旧案例投稿弹窗，仅为工作台渐进移除保留；后续请替换为新的案例流程或直接下线。
+ */
 export function SubmitCaseModal({
   appId,
   initialTitle,

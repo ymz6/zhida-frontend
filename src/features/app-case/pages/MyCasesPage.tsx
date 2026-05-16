@@ -39,6 +39,9 @@ function getMyCaseRowKey(record: MyAppCaseInfo) {
   return record.id || record.appId || `${record.title}-${record.createdAt}`
 }
 
+/**
+ * @deprecated 旧“我的投稿”页面已废弃，仅为渐进移除保留。
+ */
 export function MyCasesPage() {
   const navigate = useNavigate()
   const [request, setRequest] = useState<ListMyAppCasesRequest>(DEFAULT_MY_CASES_REQUEST)

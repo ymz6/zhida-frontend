@@ -1,5 +1,8 @@
 import emptyAppCover from '@/assets/empty-app-cover.svg'
 
+/**
+ * @deprecated 旧案例卡片封面组件，仅为旧案例模块渐进移除保留。
+ */
 export function CaseCover({
   coverUrl,
   title,

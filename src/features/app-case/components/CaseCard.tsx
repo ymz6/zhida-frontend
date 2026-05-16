@@ -11,6 +11,9 @@ import {
 } from '../utils/case'
 import { CaseCover } from './CaseCover'
 
+/**
+ * @deprecated 旧案例卡片组件；新案例广场请使用 src/features/cases-square/components/PublicCaseCard。
+ */
 export function CaseCard({
   appCase,
   onOpen,

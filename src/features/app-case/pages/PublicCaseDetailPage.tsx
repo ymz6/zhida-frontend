@@ -13,6 +13,9 @@ import {
   openCasePreview,
 } from '../utils/case'
 
+/**
+ * @deprecated 旧公开案例详情页已废弃；当前公开案例入口已切换到 cases-square。
+ */
 export function PublicCaseDetailPage({ caseId }: { caseId: string }) {
   const navigate = useNavigate()
   const caseQuery = useGetPublicCase<

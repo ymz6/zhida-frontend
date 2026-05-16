@@ -92,6 +92,9 @@ function selectValueToFeatured(value: 'true' | 'false' | undefined) {
   return undefined
 }
 
+/**
+ * @deprecated 旧后台案例管理页，仅为 /admin/cases 渐进下线保留。
+ */
 export function AdminCasesPage() {
   const { message, modal } = App.useApp()
   const queryClient = useQueryClient()

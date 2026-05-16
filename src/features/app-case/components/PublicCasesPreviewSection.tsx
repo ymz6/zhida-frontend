@@ -13,6 +13,9 @@ const HOME_CASES_REQUEST = {
   pageSize: 6,
 }
 
+/**
+ * @deprecated 旧首页案例预览卡片骨架，仅为旧案例模块保留。
+ */
 function CaseCardSkeleton() {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm">
@@ -29,6 +32,9 @@ function CaseCardSkeleton() {
   )
 }
 
+/**
+ * @deprecated 旧案例广场首页预览区已废弃；新入口请使用 src/features/home/components/FeaturedCasesSection。
+ */
 export function PublicCasesPreviewSection() {
   const navigate = useNavigate()
   const casesQuery = useListPublicCases<PageResultAppCaseSummary | undefined, { message?: string }>(

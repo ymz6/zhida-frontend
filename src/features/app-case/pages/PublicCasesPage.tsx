@@ -32,6 +32,9 @@ function PublicCaseSkeleton() {
   )
 }
 
+/**
+ * @deprecated 旧公开案例列表页已废弃；/_basic/cases 已切换到 src/features/cases-square/pages/CasesSquarePage。
+ */
 export function PublicCasesPage() {
   const navigate = useNavigate()
   const [keywordInput, setKeywordInput] = useState('')
