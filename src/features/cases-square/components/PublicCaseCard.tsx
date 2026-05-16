@@ -1,5 +1,6 @@
-import { Avatar, Badge } from 'antd'
-import { Star } from 'lucide-react'
+import emptyAppCover from '@/assets/empty-app-cover.svg'
+import { Avatar, Badge, Button, Tooltip } from 'antd'
+import { Heart, Star } from 'lucide-react'
 
 export type PublicCaseCardData = {
   id: number
@@ -13,10 +14,14 @@ export function PublicCaseCard({ appCase }: { appCase: PublicCaseCardData }) {
   const card = (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition-shadow hover:shadow-md hover:shadow-slate-900/8">
       <div className="relative aspect-16/10 overflow-hidden bg-slate-100">
-        <div className="size-full border-b border-slate-200 bg-slate-50" />
+        <img
+          src={emptyAppCover}
+          alt={`${appCase.title}封面`}
+          className="size-full border-b border-slate-200 object-cover object-top"
+        />
       </div>
 
-      <div className="flex gap-3 p-4">
+      <div className="flex items-center gap-3 p-4">
         <Avatar
           size={44}
           className="shrink-0 bg-blue-50 text-blue-600"
@@ -31,6 +36,19 @@ export function PublicCaseCard({ appCase }: { appCase: PublicCaseCardData }) {
             {appCase.authorName} · {appCase.createdAt}
           </p>
         </div>
+        <Tooltip title="收藏案例">
+          <Button
+            type="text"
+            aria-label={`${appCase.title} 收藏`}
+            icon={
+              <Heart
+                className="size-5"
+                aria-hidden="true"
+              />
+            }
+            className="h-10 w-10 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100! hover:text-rose-500!"
+          />
+        </Tooltip>
       </div>
     </article>
   )
@@ -40,16 +58,21 @@ export function PublicCaseCard({ appCase }: { appCase: PublicCaseCardData }) {
   }
 
   return (
-    <Badge.Ribbon
-      color="#bae6fd"
-      text={
-        <span className="inline-flex items-center gap-1 font-semibold text-sky-800">
-          <Star className="size-3.5 fill-yellow-300 text-yellow-300" />
-          精选
-        </span>
-      }
-    >
-      {card}
-    </Badge.Ribbon>
+    <div className="-mr-2 overflow-visible pr-2">
+      <Badge.Ribbon
+        color="#bae6fd"
+        text={
+          <span className="inline-flex items-center gap-1 font-semibold text-sky-800">
+            <Star
+              className="size-3.5 fill-yellow-300 text-yellow-300"
+              aria-hidden="true"
+            />
+            精选
+          </span>
+        }
+      >
+        {card}
+      </Badge.Ribbon>
+    </div>
   )
 }

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1" width="302" height="180" viewBox="0 0 302 180">
+  <g>
+    <path d="M0,168C0,174.627,5.37258,180,12,180L290,180C296.627,180,302,174.627,302,168L302,12C302,5.37258,296.627,0,290,0L12,0C5.37258,0,0,5.37258,0,12L0,168Z" fill="#FAFAF9" fill-opacity="1"/>
+    <ellipse cx="20" cy="20" rx="8" ry="8" fill="#111925" fill-opacity="0.15000000596046448"/>
+    <rect x="36" y="15" width="180" height="10" rx="5" fill="#111925" fill-opacity="0.05000000074505806"/>
+    <rect x="12" y="42" width="60" height="126" rx="6" fill="#111925" fill-opacity="0.05000000074505806"/>
+    <rect x="22" y="121" width="41" height="10" rx="5" fill="#111925" fill-opacity="0.05000000074505806"/>
+    <rect x="22" y="136" width="41" height="10" rx="5" fill="#111925" fill-opacity="0.05000000074505806"/>
+    <rect x="81" y="42" width="207" height="126" rx="6" fill="#111925" fill-opacity="0.029999999329447746"/>
+    <rect x="95" y="58" width="180" height="10" rx="5" fill="#111925" fill-opacity="0.029999999329447746"/>
+    <rect x="95" y="82" width="180" height="10" rx="5" fill="#111925" fill-opacity="0.029999999329447746"/>
+    <rect x="95" y="106" width="77" height="10" rx="5" fill="#111925" fill-opacity="0.029999999329447746"/>
+    <rect x="95" y="126" width="180" height="29" rx="4" fill="#111925" fill-opacity="0.05000000074505806"/>
+  </g>
+</svg>
