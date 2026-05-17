@@ -5,8 +5,8 @@
  * OpenAPI spec version: v0
  */
 
-export interface ResponseLong {
-  code?: number;
+export interface CreateAppStreamMessage {
+  step?: string;
   message?: string;
-  data?: string;
+  appId?: string;
 }

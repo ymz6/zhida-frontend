@@ -29,6 +29,7 @@ import type {
   ChatRequest,
   ChatStreamMessage,
   CreateAppRequest,
+  CreateAppStreamMessage,
   EditAppRequest,
   ListAppAuditRecordsParams,
   ListAppMessagesParams,
@@ -37,7 +38,6 @@ import type {
   ResponseAppVO,
   ResponseCursorResultAppChatMessageVO,
   ResponseFileNode,
-  ResponseLong,
   ResponsePageResultAppVO,
   ResponsePageResultAuditRecordVO,
   ResponseString,
@@ -383,7 +383,7 @@ export const createApp = (
 ) => {
 
 
-      return customInstance<ResponseLong>(
+      return customInstance<CreateAppStreamMessage[]>(
       {url: `/apps`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createAppRequest, signal
