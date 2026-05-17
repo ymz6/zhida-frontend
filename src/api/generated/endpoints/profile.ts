@@ -27,7 +27,7 @@ import type {
 
 import type {
   ChangeAvatarBody,
-  ResponseUserInfo,
+  ResponseUserVO,
   UpdateProfileRequest
 } from '../models';
 
@@ -45,7 +45,7 @@ export const getProfile = (
 ) => {
 
 
-      return customInstance<ResponseUserInfo>(
+      return customInstance<ResponseUserVO>(
       {url: `/profile`, method: 'GET', signal
     },
       options);
@@ -150,7 +150,7 @@ export const updateProfile = (
 ) => {
 
 
-      return customInstance<ResponseUserInfo>(
+      return customInstance<ResponseUserVO>(
       {url: `/profile`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateProfileRequest, signal
@@ -209,7 +209,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const formData = new FormData();
 formData.append(`file`, changeAvatarBody.file);
 
-      return customInstance<ResponseUserInfo>(
+      return customInstance<ResponseUserVO>(
       {url: `/profile/avatar`, method: 'PUT',
        data: formData, signal
     },

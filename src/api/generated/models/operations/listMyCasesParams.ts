@@ -4,8 +4,8 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { ListMyAppCasesRequest } from '../listMyAppCasesRequest';
+import type { ListMyCasesRequest } from '../listMyCasesRequest';
 
 export type ListMyCasesParams = {
-request: ListMyAppCasesRequest;
+request: ListMyCasesRequest;
 };

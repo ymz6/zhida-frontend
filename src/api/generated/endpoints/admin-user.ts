@@ -23,7 +23,7 @@ import type {
 
 import type {
   ListUsersParams,
-  ResponsePageResultUserInfo
+  ResponsePageResultUserVO
 } from '../models';
 
 import { customInstance } from '../../mutator/custom-instance';
@@ -40,7 +40,7 @@ export const listUsers = (
 ) => {
 
 
-      return customInstance<ResponsePageResultUserInfo>(
+      return customInstance<ResponsePageResultUserVO>(
       {url: `/admin/users`, method: 'GET',
         params, signal
     },

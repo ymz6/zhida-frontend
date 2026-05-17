@@ -5,10 +5,10 @@
  * OpenAPI spec version: v0
  */
 
-export interface CreateAppRequest {
+export interface EditAppRequest {
   /**
      * @minLength 0
-     * @maxLength 6000
+     * @maxLength 20
      */
-  initPrompt: string;
+  name: string;
 }

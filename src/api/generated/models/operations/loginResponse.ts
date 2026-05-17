@@ -4,9 +4,9 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { UserInfo } from '../userInfo';
+import type { UserVO } from '../userVO';
 
 export interface LoginResponse {
   accessToken?: string;
-  userInfo?: UserInfo;
+  userVO?: UserVO;
 }

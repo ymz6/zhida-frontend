@@ -5,8 +5,11 @@
  * OpenAPI spec version: v0
  */
 
-export interface ListAppMessagesRequest {
-  cursor?: string;
+export interface ListCasesRequest {
+  /** @minimum 1 */
+  pageNum?: number;
   /** @minimum 1 */
   pageSize?: number;
+  keyword?: string;
+  featuredOnly?: boolean;
 }

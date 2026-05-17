@@ -5,15 +5,17 @@
  * OpenAPI spec version: v0
  */
 
-export interface UpdateProfileRequest {
-  /**
-     * @minLength 0
-     * @maxLength 10
-     */
-  nickname: string;
+export interface UpdateFavoriteRequest {
   /**
      * @minLength 0
      * @maxLength 100
      */
-  profile?: string;
+  name?: string;
+  /**
+     * @minLength 0
+     * @maxLength 500
+     */
+  description?: string;
+  /** @minimum 0 */
+  sortOrder?: number;
 }

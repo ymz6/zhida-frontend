@@ -4,9 +4,11 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-import type { ChatRequestMode } from './chatRequestMode';
 
 export interface ChatRequest {
-  mode: ChatRequestMode;
-  prompt?: string;
+  /**
+     * @minLength 0
+     * @maxLength 1000
+     */
+  prompt: string;
 }

@@ -5,10 +5,4 @@
  * OpenAPI spec version: v0
  */
 
-export interface CreateAppRequest {
-  /**
-     * @minLength 0
-     * @maxLength 6000
-     */
-  initPrompt: string;
-}
+export type ResponseMapLongBooleanData = {[key: string]: boolean};

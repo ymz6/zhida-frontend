@@ -5,10 +5,9 @@
  * OpenAPI spec version: v0
  */
 
-export interface CreateAppRequest {
-  /**
-     * @minLength 0
-     * @maxLength 6000
-     */
-  initPrompt: string;
+export interface ListCommentsRequest {
+  /** @minimum 1 */
+  pageNum?: number;
+  /** @minimum 1 */
+  pageSize?: number;
 }
