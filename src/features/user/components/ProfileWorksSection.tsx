@@ -1,5 +1,10 @@
+import { useListMyCases } from '@/api/generated/endpoints/case'
+import { ListMyCasesRequestStatus } from '@/api/generated/models'
+import type { ListMyCasesRequest, PageResultAppVO } from '@/api/generated/models'
+import { keepPreviousData } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { Link } from '@tanstack/react-router'
-import { Empty, Pagination, Tabs } from 'antd'
+import { Alert, Empty, Pagination, Skeleton, Tabs } from 'antd'
 import {
   ArrowUpRight,
   CircleCheck,
@@ -13,9 +18,17 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 
 import { ProfileWorkCard, workStatusLabels } from './ProfileWorkCard'
-import type { ProfileWorkItem, ProfileWorkStatus } from './ProfileWorkCard'
+import type { ProfileWorkStatus } from './ProfileWorkCard'
+import { getErrorMessage } from '../utils/profile'
 
 const PAGE_SIZE = 6
+
+const workStatusRequestMap: Record<Exclude<ProfileWorkStatus, 'all'>, ListMyCasesRequestStatus> = {
+  draft: ListMyCasesRequestStatus.DRAFT,
+  pending: ListMyCasesRequestStatus.PENDING,
+  approved: ListMyCasesRequestStatus.APPROVED,
+  rejected: ListMyCasesRequestStatus.REJECTED,
+}
 
 const workStatusIcons = {
   all: <LayoutGrid className="size-4" />,
@@ -24,58 +37,6 @@ const workStatusIcons = {
   approved: <CircleCheck className="size-4" />,
   rejected: <CircleX className="size-4" />,
 } satisfies Record<ProfileWorkStatus, ReactNode>
-
-const profileWorks = [
-  {
-    id: 1,
-    title: '智能客服页面',
-    createdAt: '2026-05-15',
-    status: 'approved',
-    isFeatured: true,
-  },
-  {
-    id: 2,
-    title: '数据看板模板',
-    createdAt: '2026-05-14',
-    status: 'pending',
-    isFeatured: false,
-  },
-  {
-    id: 3,
-    title: '审批流表单',
-    createdAt: '2026-05-12',
-    status: 'draft',
-    isFeatured: false,
-  },
-  {
-    id: 4,
-    title: '暗夜话题社区',
-    createdAt: '2026-05-09',
-    status: 'approved',
-    isFeatured: false,
-  },
-  {
-    id: 5,
-    title: '客户线索看板',
-    createdAt: '2026-05-03',
-    status: 'rejected',
-    isFeatured: false,
-  },
-  {
-    id: 6,
-    title: '活动报名页',
-    createdAt: '2026-04-28',
-    status: 'pending',
-    isFeatured: false,
-  },
-  {
-    id: 7,
-    title: '团队任务面板',
-    createdAt: '2026-04-20',
-    status: 'draft',
-    isFeatured: false,
-  },
-] satisfies ProfileWorkItem[]
 
 const workStatusTabs = (Object.keys(workStatusLabels) as ProfileWorkStatus[]).map((status) => ({
   key: status,
@@ -88,13 +49,33 @@ const workStatusTabs = (Object.keys(workStatusLabels) as ProfileWorkStatus[]).ma
 }))
 
 export function ProfileWorksSection() {
+  const navigate = useNavigate()
   const [activeStatus, setActiveStatus] = useState<ProfileWorkStatus>('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const filteredWorks =
-    activeStatus === 'all'
-      ? profileWorks
-      : profileWorks.filter((work) => work.status === activeStatus)
-  const pageWorks = filteredWorks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const search: ListMyCasesRequest = {
+    pageNum: currentPage,
+    pageSize: PAGE_SIZE,
+    status: activeStatus === 'all' ? undefined : workStatusRequestMap[activeStatus],
+  }
+  const queryParams = {
+    request: search,
+  }
+  const worksQuery = useListMyCases<PageResultAppVO | undefined, { message?: string }>(
+    queryParams,
+    {
+      request: {
+        params: search,
+      },
+      query: {
+        placeholderData: keepPreviousData,
+        retry: false,
+        select: (response) => response.data,
+      },
+    },
+  )
+  const pageResult = worksQuery.data
+  const works = pageResult?.list ?? []
+  const total = Number(pageResult?.total ?? 0)
 
   return (
     <section className="relative z-10 rounded-3xl border border-slate-200/70 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] sm:p-8">
@@ -134,14 +115,50 @@ export function ProfileWorksSection() {
         className="mt-5 [&_.ant-tabs-nav]:mb-5!"
       />
 
-      {filteredWorks.length > 0 ? (
+      {worksQuery.isError ? (
+        <Alert
+          showIcon
+          type="error"
+          title="作品加载失败"
+          description={getErrorMessage(worksQuery.error, '请稍后重试')}
+          action={
+            <button
+              type="button"
+              onClick={() => void worksQuery.refetch()}
+              className="text-sm font-medium text-sky-600 hover:text-sky-700"
+            >
+              重试
+            </button>
+          }
+          className="rounded-2xl"
+        />
+      ) : worksQuery.isLoading ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+            <Skeleton.Node
+              key={index}
+              active
+              className="h-70! w-full! rounded-lg!"
+            />
+          ))}
+        </div>
+      ) : works.length > 0 ? (
         <>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* 我的作品暂用本地结构占位，后续接入接口时替换数据来源即可。 */}
-            {pageWorks.map((work) => (
+            {works.map((work) => (
               <ProfileWorkCard
                 key={work.id}
                 work={work}
+                onOpen={(currentWork) => {
+                  if (!currentWork.id) {
+                    return
+                  }
+
+                  void navigate({
+                    to: '/workbench/$appId',
+                    params: { appId: currentWork.id },
+                  })
+                }}
               />
             ))}
           </div>
@@ -150,7 +167,7 @@ export function ProfileWorksSection() {
             <Pagination
               current={currentPage}
               pageSize={PAGE_SIZE}
-              total={filteredWorks.length}
+              total={total}
               showSizeChanger={false}
               onChange={setCurrentPage}
             />

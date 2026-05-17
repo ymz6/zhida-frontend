@@ -109,6 +109,16 @@ export async function createCroppedAvatarBlob({
   return croppedAvatarBlob
 }
 
+export function createAvatarUploadFile(avatarBlob: Blob, sourceFileName: string) {
+  const fileExtension = avatarBlob.type === 'image/webp' ? 'webp' : 'jpg'
+  const sourceBaseName = sourceFileName.replace(/\.[^/.]+$/, '').trim() || 'avatar'
+
+  // canvas.toBlob() returns a Blob without File.name; wrapping it keeps multipart filename.
+  return new File([avatarBlob], `${sourceBaseName}.${fileExtension}`, {
+    type: avatarBlob.type,
+  })
+}
+
 function loadImage(sourceUrl: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()

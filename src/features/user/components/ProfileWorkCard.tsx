@@ -1,17 +1,11 @@
 import emptyAppCover from '@/assets/empty-app-cover.svg'
-import { Badge, Button, Dropdown, Tag } from 'antd'
-import type { MenuProps } from 'antd'
-import { MoreHorizontal, Star, Trash2 } from 'lucide-react'
+import type { AppVO } from '@/api/generated/models'
+import { Badge, Button, Tag } from 'antd'
+import { ArrowUpRight, Star } from 'lucide-react'
+
+import { formatProfileDateTime, getAppAuditStatus, getAppDisplayName } from '../utils/profile'
 
 export type ProfileWorkStatus = 'all' | 'draft' | 'pending' | 'approved' | 'rejected'
-
-export type ProfileWorkItem = {
-  id: number
-  title: string
-  createdAt: string
-  status: Exclude<ProfileWorkStatus, 'all'>
-  isFeatured: boolean
-}
 
 export const workStatusLabels: Record<ProfileWorkStatus, string> = {
   all: '全部',
@@ -21,29 +15,23 @@ export const workStatusLabels: Record<ProfileWorkStatus, string> = {
   rejected: '未通过',
 }
 
-const workStatusColors: Record<ProfileWorkItem['status'], string> = {
+const workStatusColors: Record<Exclude<ProfileWorkStatus, 'all'>, string> = {
   draft: 'default',
   pending: 'processing',
   approved: 'success',
   rejected: 'error',
 }
 
-const workActionItems: MenuProps['items'] = [
-  {
-    key: 'delete',
-    danger: true,
-    icon: <Trash2 className="size-4" />,
-    label: '删除作品',
-  },
-]
-
-export function ProfileWorkCard({ work }: { work: ProfileWorkItem }) {
+export function ProfileWorkCard({ work, onOpen }: { work: AppVO; onOpen: (work: AppVO) => void }) {
+  const title = getAppDisplayName(work)
+  const status = getAppAuditStatus(work)
+  const createdAt = formatProfileDateTime(work.createdAt)
   const card = (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition-shadow hover:shadow-md hover:shadow-slate-900/8">
       <div className="relative aspect-16/10 overflow-hidden bg-slate-100">
         <img
-          src={emptyAppCover}
-          alt={`${work.title}封面`}
+          src={work.coverUrl || emptyAppCover}
+          alt={`${title}封面`}
           className="size-full border-b border-slate-200 object-cover object-top"
         />
       </div>
@@ -52,34 +40,30 @@ export function ProfileWorkCard({ work }: { work: ProfileWorkItem }) {
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="m-0 min-w-0 flex-1 truncate text-base font-semibold text-slate-950">
-              {work.title}
+              {title}
             </h2>
             <Tag
-              color={workStatusColors[work.status]}
+              color={workStatusColors[status]}
               className="m-0 shrink-0"
             >
-              {workStatusLabels[work.status]}
+              {workStatusLabels[status]}
             </Tag>
           </div>
-          <p className="mt-1 truncate text-sm text-slate-500">创建于 {work.createdAt}</p>
+          <p className="mt-1 truncate text-sm text-slate-500">创建于 {createdAt}</p>
         </div>
-        <Dropdown
-          menu={{ items: workActionItems }}
-          trigger={['click']}
-          placement="bottomRight"
-        >
-          <Button
-            type="text"
-            aria-label={`${work.title} 更多操作`}
-            icon={<MoreHorizontal className="size-5" />}
-            className="h-10 w-10 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100!"
-          />
-        </Dropdown>
+        <Button
+          type="text"
+          aria-label={`打开 ${title}`}
+          icon={<ArrowUpRight className="size-5" />}
+          disabled={!work.id}
+          onClick={() => onOpen(work)}
+          className="h-10 w-10 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100!"
+        />
       </div>
     </article>
   )
 
-  if (!work.isFeatured) {
+  if (!work.featured) {
     return card
   }
 

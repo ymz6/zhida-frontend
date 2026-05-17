@@ -6,14 +6,16 @@ export function ProfileEditDrawer({
   open,
   profile,
   width,
+  submitting,
   onClose,
   onSubmit,
 }: {
   open: boolean
   profile: ProfileInfo
   width: number | string
+  submitting?: boolean
   onClose: () => void
-  onSubmit: (values: ProfileEditFormValues) => void
+  onSubmit: (values: ProfileEditFormValues) => Promise<void> | void
 }) {
   const [form] = Form.useForm<ProfileEditFormValues>()
 
@@ -29,16 +31,24 @@ export function ProfileEditDrawer({
   }, [form, open, profile.nickname, profile.profile])
 
   const handleClose = () => {
+    if (submitting) {
+      return
+    }
+
     form.resetFields()
     onClose()
   }
 
-  const handleSubmit = (values: ProfileEditFormValues) => {
-    onSubmit({
-      nickname: values.nickname.trim(),
-      profile: values.profile.trim(),
-    })
-    form.resetFields()
+  const handleSubmit = async (values: ProfileEditFormValues) => {
+    try {
+      await onSubmit({
+        nickname: values.nickname.trim(),
+        profile: values.profile.trim(),
+      })
+      form.resetFields()
+    } catch {
+      // 提交失败时保留用户当前输入，方便继续修改后重试。
+    }
   }
 
   return (
@@ -55,6 +65,7 @@ export function ProfileEditDrawer({
         >
           <Button
             onClick={handleClose}
+            disabled={submitting}
             className="rounded-full"
           >
             取消
@@ -62,6 +73,7 @@ export function ProfileEditDrawer({
           <Button
             type="primary"
             onClick={() => void form.submit()}
+            loading={submitting}
             className="rounded-full px-5 shadow-none"
           >
             保存
@@ -74,7 +86,7 @@ export function ProfileEditDrawer({
         layout="vertical"
         colon={false}
         requiredMark={false}
-        onFinish={handleSubmit}
+        onFinish={(values) => void handleSubmit(values)}
         className="[&_.ant-form-item]:mb-5"
       >
         <Form.Item

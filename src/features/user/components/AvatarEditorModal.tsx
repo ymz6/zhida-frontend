@@ -1,4 +1,8 @@
-import { createCroppedAvatarBlob, validateAvatarFile } from '@/features/user/utils/avatar'
+import {
+  createAvatarUploadFile,
+  createCroppedAvatarBlob,
+  validateAvatarFile,
+} from '@/features/user/utils/avatar'
 import { Alert, App, Button, Card, Flex, Modal, Slider, Typography } from 'antd'
 import { Camera, RotateCw, ZoomIn } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -21,12 +25,13 @@ export function AvatarEditorModal({
   avatarInputRef: RefObject<HTMLInputElement | null>
   onReadyToEdit: () => void
   onCancel: () => void
-  onAvatarChange: (avatarBlob: Blob) => void
+  onAvatarChange: (avatarFile: File) => Promise<void> | void
 }) {
   const { message } = App.useApp()
   const [isCropperMounted, setIsCropperMounted] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [sourceUrl, setSourceUrl] = useState<string | null>(null)
+  const [sourceFileName, setSourceFileName] = useState('')
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -48,6 +53,7 @@ export function AvatarEditorModal({
 
   const resetEditorState = () => {
     setSourceUrl(null)
+    setSourceFileName('')
     setCrop({ x: 0, y: 0 })
     setZoom(1)
     setRotation(0)
@@ -77,6 +83,7 @@ export function AvatarEditorModal({
       const objectUrl = await validateAvatarFile(file)
 
       setSourceUrl(objectUrl)
+      setSourceFileName(file.name)
       setCrop({ x: 0, y: 0 })
       setZoom(1)
       setRotation(0)
@@ -102,8 +109,9 @@ export function AvatarEditorModal({
         croppedAreaPixels,
         rotation,
       })
+      const avatarFile = createAvatarUploadFile(avatarBlob, sourceFileName)
 
-      onAvatarChange(avatarBlob)
+      await onAvatarChange(avatarFile)
       message.success('头像更新成功')
       onCancel()
       resetEditorState()
