@@ -1,12 +1,12 @@
-import type { UserInfo } from '@/api/generated/models'
+import type { UserVO } from '@/api/generated/models'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 interface AuthSessionState {
   accessToken: string | null
-  userInfo: UserInfo | null
-  setSession: (payload: { accessToken: string; userInfo: UserInfo }) => void
-  setUserInfo: (userInfo: UserInfo) => void
+  user: UserVO | null
+  setSession: (payload: { accessToken: string; user: UserVO }) => void
+  setUser: (user: UserVO) => void
   clearSession: () => void
 }
 
@@ -14,10 +14,10 @@ export const useAuthSessionStore = create<AuthSessionState>()(
   persist(
     (set) => ({
       accessToken: null,
-      userInfo: null,
-      setSession: ({ accessToken, userInfo }) => set({ accessToken, userInfo }),
-      setUserInfo: (userInfo) => set({ userInfo }),
-      clearSession: () => set({ accessToken: null, userInfo: null }),
+      user: null,
+      setSession: ({ accessToken, user }) => set({ accessToken, user }),
+      setUser: (user) => set({ user }),
+      clearSession: () => set({ accessToken: null, user: null }),
     }),
     {
       name: 'auth-session',

@@ -16,21 +16,11 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const { message, modal } = App.useApp()
   const isAuthenticated = useAuthSessionStore((state) => Boolean(state.accessToken))
-  const userInfo = useAuthSessionStore((state) => state.userInfo)
+  const user = useAuthSessionStore((state) => state.user)
   const logoutMutation = useLogout()
-  const isAdmin = userInfo?.role === 1
-  const userDisplayName = userInfo?.nickname?.trim() || '未设置'
-  const userDisplayInitial = userInfo?.nickname?.trim().slice(0, 1).toUpperCase()
-
-  const finishLogout = (successMessage: string) => {
-    useAuthSessionStore.getState().clearSession()
-    queryClient.clear()
-    message.success(successMessage)
-    void navigate({
-      to: '/auth/login',
-      replace: true,
-    })
-  }
+  const isAdmin = user?.role === 1
+  const userDisplayName = user?.nickname?.trim() || '未设置'
+  const userDisplayInitial = user?.nickname?.trim().slice(0, 1).toUpperCase()
 
   const confirmLogout = () => {
     modal.confirm({
@@ -45,7 +35,13 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
       onOk: async () => {
         try {
           await logoutMutation.mutateAsync()
-          finishLogout('退出登录成功')
+          useAuthSessionStore.getState().clearSession()
+          queryClient.clear()
+          message.success('退出登录成功')
+          void navigate({
+            to: '/auth/login',
+            replace: true,
+          })
         } catch (error: any) {
           message.error(error.message)
           throw error
@@ -158,10 +154,14 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
               placement="bottomRight"
               trigger={['hover']}
             >
-              <button className="group flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-2 py-1 transition-colors hover:bg-slate-100/90 [&.ant-dropdown-open_.user-dropdown-chevron]:rotate-180">
+              <Button
+                type="text"
+                shape="round"
+                className="group flex h-auto shrink-0 items-center gap-2 px-2! py-1! hover:bg-slate-100/90 [&.ant-dropdown-open_.user-dropdown-chevron]:rotate-180"
+              >
                 <Avatar
                   size={32}
-                  src={userInfo?.avatar}
+                  src={user?.avatar}
                   className="bg-slate-900 ring-1 ring-slate-200"
                 >
                   {userDisplayInitial}
@@ -170,7 +170,7 @@ export default function BasicLayout({ children }: { children: ReactNode }) {
                   {userDisplayName}
                 </span>
                 <ChevronDown className="user-dropdown-chevron size-4 text-slate-400 transition-[color,transform] duration-200 group-hover:text-slate-600" />
-              </button>
+              </Button>
             </Dropdown>
           ) : (
             <Button

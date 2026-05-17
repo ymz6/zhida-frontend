@@ -1,6 +1,6 @@
 import { useLogin } from '@/api/generated/endpoints/auth'
 import type { LoginRequest } from '@/api/generated/models'
-import type { UserInfo } from '@/api/generated/models'
+import type { UserVO } from '@/api/generated/models'
 import { useAuthSessionStore } from '@/stores/auth-session'
 import { useNavigate } from '@tanstack/react-router'
 import { App, Button, Form, Input } from 'antd'
@@ -16,11 +16,10 @@ export function LoginPage() {
   const handleFinish = async (values: LoginRequest) => {
     try {
       const response = await loginMutation.mutateAsync({ data: values })
-      const loginData = response.data as { accessToken: string; userInfo: UserInfo }
-
+      const loginData = response.data as { accessToken: string; userVO: UserVO }
       setSession({
         accessToken: loginData.accessToken,
-        userInfo: loginData.userInfo,
+        user: loginData.userVO,
       })
       message.success('登录成功')
       void navigate({ to: '/' })
