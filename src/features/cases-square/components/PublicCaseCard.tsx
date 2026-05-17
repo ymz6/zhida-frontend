@@ -1,21 +1,68 @@
 import emptyAppCover from '@/assets/empty-app-cover.svg'
 import { Avatar, Badge, Button, Tooltip } from 'antd'
 import { Heart, Star } from 'lucide-react'
+import type { KeyboardEvent, ReactNode } from 'react'
 
 export type PublicCaseCardData = {
-  id: number
+  id: string | number
   title: string
   authorName: string
   createdAt: string
   isFeatured: boolean
+  coverUrl?: string
 }
 
-export function PublicCaseCard({ appCase }: { appCase: PublicCaseCardData }) {
+export function PublicCaseCard({
+  appCase,
+  action,
+  onOpen,
+}: {
+  appCase: PublicCaseCardData
+  action?: ReactNode
+  onOpen?: (appCase: PublicCaseCardData) => void
+}) {
+  const isInteractive = Boolean(onOpen)
+  const handleOpen = () => {
+    onOpen?.(appCase)
+  }
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+
+    event.preventDefault()
+    handleOpen()
+  }
+  const cardAction = action ?? (
+    <Tooltip title="收藏案例">
+      <Button
+        type="text"
+        aria-label={`${appCase.title} 收藏`}
+        icon={
+          <Heart
+            className="size-5"
+            aria-hidden="true"
+          />
+        }
+        className="h-10 w-10 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100! hover:text-rose-500!"
+      />
+    </Tooltip>
+  )
   const card = (
-    <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition-shadow hover:shadow-md hover:shadow-slate-900/8">
+    <article
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={isInteractive ? handleOpen : undefined}
+      onKeyDown={isInteractive ? handleCardKeyDown : undefined}
+      className={`overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition-shadow hover:shadow-md hover:shadow-slate-900/8 ${
+        isInteractive
+          ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2'
+          : ''
+      }`}
+    >
       <div className="relative aspect-16/10 overflow-hidden bg-slate-100">
         <img
-          src={emptyAppCover}
+          src={appCase.coverUrl || emptyAppCover}
           alt={`${appCase.title}封面`}
           className="size-full border-b border-slate-200 object-cover object-top"
         />
@@ -36,19 +83,13 @@ export function PublicCaseCard({ appCase }: { appCase: PublicCaseCardData }) {
             {appCase.authorName} · {appCase.createdAt}
           </p>
         </div>
-        <Tooltip title="收藏案例">
-          <Button
-            type="text"
-            aria-label={`${appCase.title} 收藏`}
-            icon={
-              <Heart
-                className="size-5"
-                aria-hidden="true"
-              />
-            }
-            className="h-10 w-10 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100! hover:text-rose-500!"
-          />
-        </Tooltip>
+        <div
+          className="shrink-0"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          {cardAction}
+        </div>
       </div>
     </article>
   )

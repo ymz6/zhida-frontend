@@ -165,7 +165,7 @@ export function ProfilePage() {
             ),
           },
         ]}
-        className="[&_.ant-tabs-nav]:mb-3! [&_.ant-tabs-nav]:rounded-3xl [&_.ant-tabs-nav]:border [&_.ant-tabs-nav]:border-slate-200/70 [&_.ant-tabs-nav]:bg-white [&_.ant-tabs-nav]:px-4 [&_.ant-tabs-nav]:shadow-[0_12px_30px_rgba(15,23,42,0.05)] sm:[&_.ant-tabs-nav]:px-6 [&_.ant-tabs-tab]:flex [&_.ant-tabs-tab]:h-14 [&_.ant-tabs-tab]:items-center [&_.ant-tabs-tab]:px-1"
+        className="[&>.ant-tabs-nav]:mb-3! [&>.ant-tabs-nav]:rounded-3xl [&>.ant-tabs-nav]:border [&>.ant-tabs-nav]:border-slate-200/70 [&>.ant-tabs-nav]:bg-white [&>.ant-tabs-nav]:px-4 [&>.ant-tabs-nav]:shadow-[0_12px_30px_rgba(15,23,42,0.05)] sm:[&>.ant-tabs-nav]:px-6 [&>.ant-tabs-nav_.ant-tabs-tab]:flex [&>.ant-tabs-nav_.ant-tabs-tab]:h-14 [&>.ant-tabs-nav_.ant-tabs-tab]:items-center [&>.ant-tabs-nav_.ant-tabs-tab]:px-1"
       />
     </div>
   )

@@ -82,12 +82,6 @@ export function ProfileWorksSection() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="flex items-center text-2xl font-bold text-slate-950">
-            <span className="mr-3 flex size-9 items-center justify-center rounded-full bg-sky-100 text-sky-600">
-              <FolderKanban
-                className="size-5"
-                aria-hidden="true"
-              />
-            </span>
             我的作品
           </h2>
         </div>
