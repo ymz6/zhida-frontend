@@ -101,10 +101,6 @@ export function isActiveTaskStatus(status: string | undefined) {
   return status === 'PENDING' || status === 'RUNNING'
 }
 
-export function isTerminalTaskStatus(status: string | undefined) {
-  return status === 'SUCCESS' || status === 'FAILED'
-}
-
 export function parseMessageMetadata(metadata: string | undefined): Record<string, unknown> | null {
   if (!metadata) {
     return null

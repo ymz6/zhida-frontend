@@ -1,4 +1,4 @@
-import type { AppChatMessageInfo, ChatRequestMode } from '@/api/generated/models'
+import type { AppChatMessageInfo } from '@/api/generated/models'
 import { Bubble } from '@ant-design/x'
 import { Empty, Skeleton } from 'antd'
 import { Bot, Crosshair, UserRound } from 'lucide-react'
@@ -101,7 +101,6 @@ export function ConversationPanel({
   hasMoreMessages,
   isLoadingMoreMessages,
   canCode,
-  canChat,
   isSubmitting,
   previewUrl,
   isVisualEditMode,
@@ -116,14 +115,13 @@ export function ConversationPanel({
   hasMoreMessages?: boolean
   isLoadingMoreMessages?: boolean
   canCode?: boolean
-  canChat?: boolean
   isSubmitting?: boolean
   previewUrl?: string
   isVisualEditMode?: boolean
   selectedVisualEditElement?: VisualEditElement | null
   onLoadMoreMessages?: () => Promise<void>
   onVisualEditModeChange?: (enabled: boolean) => void
-  onSubmitMessage: (prompt: string, mode: ChatRequestMode) => boolean
+  onSubmitMessage: (prompt: string) => boolean
 }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const scrollContentRef = useRef<HTMLDivElement | null>(null)
@@ -273,8 +271,8 @@ export function ConversationPanel({
   }, [isLoadingMessages, syncConversationScroll])
 
   const handleSubmitMessage = useCallback(
-    (prompt: string, mode: ChatRequestMode) => {
-      const didSubmit = onSubmitMessage(prompt, mode)
+    (prompt: string) => {
+      const didSubmit = onSubmitMessage(prompt)
 
       if (didSubmit) {
         const scrollContainer = scrollContainerRef.current
@@ -325,7 +323,6 @@ export function ConversationPanel({
 
       <ConversationComposer
         canCode={canCode}
-        canChat={canChat}
         isSubmitting={isSubmitting}
         previewUrl={previewUrl}
         isVisualEditMode={isVisualEditMode}

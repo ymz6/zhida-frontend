@@ -1,40 +1,43 @@
 import zhidaLogo from '@/assets/zhida-logo.svg'
 import { Link } from '@tanstack/react-router'
-import { Button, Layout, Popover, Tag, Tooltip } from 'antd'
-import { Download, Rocket, Send } from 'lucide-react'
+import { Button, Dropdown, Layout, Popover, Tooltip } from 'antd'
+import { Download, MoreHorizontal, Rocket } from 'lucide-react'
+import type { MenuProps } from 'antd'
 import type { ReactNode } from 'react'
 
-import { getAppStatusLabel, getDeployStatusColor, getDeployStatusLabel } from '../utils/status'
-
-const headerButtonClassName = 'h-8! rounded-md! px-3! text-sm! font-medium!'
+const headerButtonClassName = 'h-8! rounded-full! px-3! text-sm! font-medium!'
 
 export function AppWorkbenchHeader({
   appName,
-  appStatus,
-  deployStatus,
   deployBlockedReason,
-  isTaskRunning,
   isDeployPending,
   canDeploy,
   hasDeployUrl,
-  canSubmitCase,
   deployInfoPopoverContent,
-  onOpenSubmitCase,
   onConfirmDeploy,
 }: {
   appName?: string
-  appStatus?: string
-  deployStatus?: string
   deployBlockedReason?: string
-  isTaskRunning?: boolean
   isDeployPending?: boolean
   canDeploy?: boolean
   hasDeployUrl?: boolean
-  canSubmitCase?: boolean
   deployInfoPopoverContent?: ReactNode
-  onOpenSubmitCase?: () => void
   onConfirmDeploy: () => void
 }) {
+  const moreMenuItems: MenuProps['items'] = [
+    {
+      key: 'download',
+      disabled: true,
+      icon: (
+        <Download
+          className="size-4"
+          aria-hidden="true"
+        />
+      ),
+      label: '下载代码',
+    },
+  ]
+
   return (
     <Layout.Header className="flex h-14! shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-slate-200 bg-white px-4! leading-normal! sm:px-5!">
       <div className="flex min-w-0 items-center gap-3">
@@ -53,54 +56,28 @@ export function AppWorkbenchHeader({
           <h1 className="truncate text-base font-semibold leading-5 text-slate-950">
             {appName || '应用工作台'}
           </h1>
-          <div className="mt-0.5 flex items-center gap-2">
-            <Tag
-              color={appStatus === 'FAILED' ? 'error' : isTaskRunning ? 'processing' : 'default'}
-              className="m-0"
-            >
-              {getAppStatusLabel(appStatus)}
-            </Tag>
-            {deployStatus && (
-              <Tag
-                color={getDeployStatusColor(deployStatus)}
-                className="m-0"
-              >
-                {getDeployStatusLabel(deployStatus)}
-              </Tag>
-            )}
-          </div>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          disabled
-          icon={
-            <Download
-              className="size-4"
-              aria-hidden="true"
-            />
-          }
-          className={headerButtonClassName}
+        <Dropdown
+          menu={{ items: moreMenuItems }}
+          placement="bottomRight"
+          trigger={['click']}
         >
-          下载代码
-        </Button>
-
-        {canSubmitCase && onOpenSubmitCase ? (
           <Button
             type="default"
             icon={
-              <Send
+              <MoreHorizontal
                 className="size-4"
                 aria-hidden="true"
               />
             }
-            onClick={onOpenSubmitCase}
             className={headerButtonClassName}
           >
-            提交案例
+            更多
           </Button>
-        ) : null}
+        </Dropdown>
 
         {hasDeployUrl && deployInfoPopoverContent ? (
           <Popover
@@ -112,7 +89,7 @@ export function AppWorkbenchHeader({
           >
             <span className="inline-flex">
               <Button
-                type="default"
+                type="primary"
                 loading={isDeployPending}
                 disabled={!canDeploy}
                 onClick={onConfirmDeploy}

@@ -1,8 +1,7 @@
-import { ChatRequestMode } from '@/api/generated/models'
 import { Sender } from '@ant-design/x'
 import { Button, Tooltip } from 'antd'
-import { ArrowUp, Crosshair, MessagesSquare } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowUp, Crosshair } from 'lucide-react'
+import { useState } from 'react'
 
 import { parseVisualEditSource, type VisualEditElement } from '../utils/visualEdit'
 
@@ -13,7 +12,6 @@ const composerActiveActionButtonClassName = `${composerActionButtonClassName} bg
 
 export function ConversationComposer({
   canCode,
-  canChat,
   isSubmitting,
   previewUrl,
   isVisualEditMode,
@@ -22,26 +20,19 @@ export function ConversationComposer({
   onSubmitMessage,
 }: {
   canCode?: boolean
-  canChat?: boolean
   isSubmitting?: boolean
   previewUrl?: string
   isVisualEditMode?: boolean
   selectedVisualEditElement?: VisualEditElement | null
   onVisualEditModeChange?: (enabled: boolean) => void
-  onSubmitMessage: (prompt: string, mode: ChatRequestMode) => boolean
+  onSubmitMessage: (prompt: string) => boolean
 }) {
   const [prompt, setPrompt] = useState('')
-  const [mode, setMode] = useState<ChatRequestMode>(ChatRequestMode.CODE)
 
-  // 可视化编辑一定会修改代码，因此输入框始终按 CODE 模式提交。
-  const effectiveMode = isVisualEditMode ? ChatRequestMode.CODE : mode
-  const canSubmitCurrentMode =
-    effectiveMode === ChatRequestMode.CHAT ? Boolean(canChat) : Boolean(canCode)
-  const isComposerDisabled = Boolean(isSubmitting || !canSubmitCurrentMode)
+  const isComposerDisabled = Boolean(isSubmitting || !canCode)
   const isPromptEmpty = prompt.trim().length === 0
   const isVisualEditSubmitBlocked = Boolean(isVisualEditMode && !selectedVisualEditElement)
   const isSendDisabled = Boolean(isComposerDisabled || isPromptEmpty || isVisualEditSubmitBlocked)
-  const isChatMode = effectiveMode === ChatRequestMode.CHAT
   const canEnableVisualEdit = Boolean(previewUrl && canCode && !isSubmitting)
   const selectedVisualEditSourceLocation = selectedVisualEditElement
     ? parseVisualEditSource(selectedVisualEditElement.source)
@@ -54,11 +45,7 @@ export function ConversationComposer({
       return '当前任务完成后可继续输入'
     }
 
-    if (effectiveMode === ChatRequestMode.CHAT && !canChat) {
-      return '应用生成成功后可进行答疑'
-    }
-
-    if (effectiveMode === ChatRequestMode.CODE && !canCode) {
+    if (!canCode) {
       return '当前状态暂不能生成或修改'
     }
 
@@ -90,55 +77,12 @@ export function ConversationComposer({
 
     return '开启可视化编辑模式'
   })()
-  const chatModeTooltipTitle = (() => {
-    if (isVisualEditMode) {
-      return '可视化编辑中不能切换对话模式'
-    }
-
-    if (isSubmitting) {
-      return '当前任务完成后可切换对话模式'
-    }
-
-    if (!canChat) {
-      return '应用生成成功后可进行答疑'
-    }
-
-    return isChatMode ? '已开启对话模式，点击切回生成模式' : '切换为对话答疑模式'
-  })()
-
-  useEffect(() => {
-    if (isVisualEditMode) {
-      setMode(ChatRequestMode.CODE)
-    }
-  }, [isVisualEditMode])
-
   const handleToggleVisualEditMode = () => {
     if (!isVisualEditMode && !canEnableVisualEdit) {
       return
     }
 
-    const nextEnabled = !isVisualEditMode
-
-    if (nextEnabled) {
-      setMode(ChatRequestMode.CODE)
-    }
-
-    onVisualEditModeChange?.(nextEnabled)
-  }
-
-  const handleToggleChatMode = () => {
-    if (isSubmitting || isVisualEditMode) {
-      return
-    }
-
-    if (isChatMode) {
-      setMode(ChatRequestMode.CODE)
-      return
-    }
-
-    if (canChat) {
-      setMode(ChatRequestMode.CHAT)
-    }
+    onVisualEditModeChange?.(!isVisualEditMode)
   }
 
   const handleSubmit = (value: string) => {
@@ -148,7 +92,7 @@ export function ConversationComposer({
       return
     }
 
-    if (onSubmitMessage(nextPrompt, effectiveMode)) {
+    if (onSubmitMessage(nextPrompt)) {
       setPrompt('')
     }
   }
@@ -190,9 +134,7 @@ export function ConversationComposer({
             ? selectedVisualEditElement
               ? '描述这个元素要如何调整'
               : '先在右侧预览选择元素，再描述修改需求'
-            : mode === ChatRequestMode.CHAT
-              ? '询问当前应用的页面、功能或实现细节'
-              : '描述想生成或调整的地方，可以一步一步完善生成效果'
+            : '描述想生成或调整的地方，可以一步一步完善生成效果'
         }
         className="relative z-10 rounded-3xl! border-0! bg-slate-100! px-3! pt-3! pb-2! shadow-none!"
         classNames={{
@@ -225,29 +167,6 @@ export function ConversationComposer({
                     }
                   >
                     编辑
-                  </Button>
-                </span>
-              </Tooltip>
-              <Tooltip title={chatModeTooltipTitle}>
-                <span className="inline-flex">
-                  <Button
-                    htmlType="button"
-                    disabled={Boolean(isSubmitting || !canChat || isVisualEditMode)}
-                    aria-pressed={isChatMode}
-                    onClick={handleToggleChatMode}
-                    icon={
-                      <MessagesSquare
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    }
-                    className={
-                      isChatMode
-                        ? composerActiveActionButtonClassName
-                        : composerInactiveActionButtonClassName
-                    }
-                  >
-                    对话
                   </Button>
                 </span>
               </Tooltip>
