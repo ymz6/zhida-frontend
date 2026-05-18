@@ -42,6 +42,10 @@ AXIOS_INSTANCE.interceptors.request.use(
 AXIOS_INSTANCE.interceptors.response.use(
   // 收到成功响应（HTTP 状态码 2xx）时执行
   (response) => {
+    if (response.config.responseType === 'blob') {
+      return response
+    }
+
     const responseData = response.data as ApiResponse
 
     if (responseData.code !== 20000) {

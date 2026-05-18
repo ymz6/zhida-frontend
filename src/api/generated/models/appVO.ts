@@ -10,7 +10,10 @@ export interface AppVO {
   id?: string;
   author?: UserBriefVO;
   name?: string;
+  initPrompt?: string;
   coverUrl?: string;
+  previewUrl?: string;
+  deployUrl?: string;
   deployKey?: string;
   deployedAt?: string;
   auditStatus?: number;
