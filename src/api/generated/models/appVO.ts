@@ -12,7 +12,6 @@ export interface AppVO {
   name?: string;
   initPrompt?: string;
   coverUrl?: string;
-  previewUrl?: string;
   deployUrl?: string;
   deployKey?: string;
   deployedAt?: string;
