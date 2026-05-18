@@ -14,6 +14,8 @@ import zhCN from 'antd/locale/zh_CN'
 // for date-picker i18n
 import 'dayjs/locale/zh-cn'
 import { XProvider } from '@ant-design/x'
+import '@ant-design/x-markdown/dist/x-markdown.css'
+import '@ant-design/x-markdown/themes/light.css'
 
 createRoot(document.getElementById('root')!).render(
   <StyleProvider layer>

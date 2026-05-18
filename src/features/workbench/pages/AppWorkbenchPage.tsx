@@ -6,14 +6,11 @@ import { Button, Layout, Result, Spin, Splitter } from 'antd'
 
 import { AppWorkbenchHeader } from '../components/AppWorkbenchHeader'
 import { AppWorkspacePanel } from '../components/AppWorkspacePanel'
-import { ConversationPanel } from '../components/ConversationPanel'
+import { AppConversation } from '../components/AppConversation'
 import { useWorkbenchRuntimeStore } from '../stores/useWorkbenchRuntimeStore'
-import type { AppChatMessageInfo, WorkbenchChatMessageInfo } from '../utils/conversationTimeline'
 
 const APP_FORBIDDEN_CODE = 40300
 const APP_NOT_FOUND_CODE = 40400
-const emptyPersistedMessages: AppChatMessageInfo[] = []
-const emptyStreamMessages: WorkbenchChatMessageInfo[] = []
 
 export function AppWorkbenchPage() {
   const navigate = useNavigate()
@@ -29,8 +26,6 @@ export function AppWorkbenchPage() {
   const appErrorCode = appQuery.error?.code
   const appErrorMessage = appQuery.error?.message
   const appDetail = appQuery.data
-
-  const canSubmitMessage = false
 
   useEffect(() => {
     enterWorkbenchApp(appId)
@@ -53,11 +48,6 @@ export function AppWorkbenchPage() {
       />
     </main>
   )
-
-  const handleSubmitMessage = () => {
-    // 静态展示模式下不创建本地临时消息，等待后续后端接口接回。
-    return false
-  }
 
   if (appErrorCode === APP_FORBIDDEN_CODE) {
     return renderResultPage(
@@ -102,21 +92,11 @@ export function AppWorkbenchPage() {
       <Layout.Content className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
         <Splitter className="h-full min-h-0 flex-1 overflow-hidden bg-white">
           <Splitter.Panel
-            defaultSize={380}
+            defaultSize={520}
             min={320}
             max="48%"
           >
-            <ConversationPanel
-              key={appId}
-              persistedMessages={emptyPersistedMessages}
-              streamMessages={emptyStreamMessages}
-              isLoadingMessages={false}
-              hasMoreMessages={false}
-              isLoadingMoreMessages={false}
-              canCode={canSubmitMessage}
-              hasPreview={Boolean(appDetail.id)}
-              onSubmitMessage={handleSubmitMessage}
-            />
+            <AppConversation app={appDetail} />
           </Splitter.Panel>
           <Splitter.Panel min={420}>
             <AppWorkspacePanel app={appDetail} />

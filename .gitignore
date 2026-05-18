@@ -29,4 +29,5 @@ routeTree.gen.ts
 .codex
 .vscode
 openspec
+tests
 docs

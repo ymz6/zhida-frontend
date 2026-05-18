@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { usePreviewDockDrag } from '../hooks/usePreviewDockDrag'
 import { usePreviewSession } from '../hooks/usePreviewSession'
@@ -12,11 +12,14 @@ export function PreviewContent({ appId, errorMessage }: { appId?: string; errorM
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const dockRef = useRef<HTMLDivElement>(null)
+  const lastPreviewRefreshVersionRef = useRef(0)
   const [previewDockState, setPreviewDockState] = useState<PreviewDockState>(
     DEFAULT_PREVIEW_DOCK_STATE,
   )
   const isGenerating = useWorkbenchRuntimeStore((state) => state.isGenerating)
   const isVisualEditMode = useWorkbenchRuntimeStore((state) => state.isVisualEditMode)
+  const previewRefreshVersion = useWorkbenchRuntimeStore((state) => state.previewRefreshVersion)
+  const setPreviewReady = useWorkbenchRuntimeStore((state) => state.setPreviewReady)
   const setSelectedVisualEditElement = useWorkbenchRuntimeStore(
     (state) => state.setSelectedVisualEditElement,
   )
@@ -48,6 +51,19 @@ export function PreviewContent({ appId, errorMessage }: { appId?: string; errorM
     }
   }
 
+  const handleRefreshPreview = useCallback(() => {
+    setPreviewReady(false)
+    refresh()
+  }, [refresh, setPreviewReady])
+
+  const handleIframeLoad = useCallback(() => {
+    handlePreviewLoad()
+
+    if (previewUrl) {
+      setPreviewReady(true)
+    }
+  }, [handlePreviewLoad, previewUrl, setPreviewReady])
+
   const handleDockCollapse = () => {
     setPreviewDockState((state) => ({
       ...state,
@@ -65,6 +81,20 @@ export function PreviewContent({ appId, errorMessage }: { appId?: string; errorM
   const emptyErrorMessage = errorMessage ?? previewSessionErrorMessage
   const emptyErrorTitle = !errorMessage && previewSessionErrorMessage ? '预览加载失败' : undefined
 
+  useEffect(() => {
+    if (
+      previewRefreshVersion > 0 &&
+      lastPreviewRefreshVersionRef.current !== previewRefreshVersion
+    ) {
+      lastPreviewRefreshVersionRef.current = previewRefreshVersion
+      handleRefreshPreview()
+    }
+  }, [previewRefreshVersion, handleRefreshPreview])
+
+  useEffect(() => {
+    setPreviewReady(false)
+  }, [appId, iframeSrc, setPreviewReady])
+
   return (
     <div
       ref={previewContainerRef}
@@ -80,7 +110,7 @@ export function PreviewContent({ appId, errorMessage }: { appId?: string; errorM
         onCollapse={handleDockCollapse}
         onExpand={handleDockExpand}
         onOpenPreview={handleOpenPreview}
-        onRefresh={refresh}
+        onRefresh={handleRefreshPreview}
         onDragPointerDown={handleDockPointerDown}
         onDragPointerMove={handleDockPointerMove}
         onDragPointerEnd={handleDockPointerEnd}
@@ -95,7 +125,7 @@ export function PreviewContent({ appId, errorMessage }: { appId?: string; errorM
           allow="fullscreen; clipboard-write"
           sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox"
           referrerPolicy="no-referrer-when-downgrade"
-          onLoad={handlePreviewLoad}
+          onLoad={handleIframeLoad}
           className="h-full w-full border-0 bg-transparent"
         />
         {isDraggingDock && (

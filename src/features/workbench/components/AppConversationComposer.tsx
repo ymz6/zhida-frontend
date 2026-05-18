@@ -3,25 +3,29 @@ import { Button, Tooltip } from 'antd'
 import { ArrowUp, Crosshair } from 'lucide-react'
 import { useState } from 'react'
 
-import { parseVisualEditSource, type VisualEditElement } from '../utils/visualEdit'
+import {
+  buildVisualEditPrompt,
+  parseVisualEditSource,
+  type VisualEditElement,
+} from '../utils/visualEdit'
 
 const composerActionButtonClassName =
   'h-8! rounded-full! border-0! px-3! text-sm! font-medium! shadow-none! [&_.ant-btn-icon]:inline-flex! [&_.ant-btn-icon]:items-center!'
 const composerInactiveActionButtonClassName = `${composerActionButtonClassName} bg-white! text-slate-700! hover:bg-white! hover:text-slate-900!`
 const composerActiveActionButtonClassName = `${composerActionButtonClassName} bg-slate-900! text-white! hover:bg-slate-800! hover:text-white!`
 
-export function ConversationComposer({
-  canCode,
+export function AppConversationComposer({
+  isSubmitEnabled,
   isSubmitting,
-  hasPreview,
+  isVisualEditEnabled,
   isVisualEditMode,
   selectedVisualEditElement,
   onVisualEditModeChange,
   onSubmitMessage,
 }: {
-  canCode?: boolean
+  isSubmitEnabled?: boolean
   isSubmitting?: boolean
-  hasPreview?: boolean
+  isVisualEditEnabled?: boolean
   isVisualEditMode?: boolean
   selectedVisualEditElement?: VisualEditElement | null
   onVisualEditModeChange?: (enabled: boolean) => void
@@ -29,11 +33,11 @@ export function ConversationComposer({
 }) {
   const [prompt, setPrompt] = useState('')
 
-  const isComposerDisabled = Boolean(isSubmitting || !canCode)
+  const isComposerDisabled = Boolean(isSubmitting || !isSubmitEnabled)
   const isPromptEmpty = prompt.trim().length === 0
   const isVisualEditSubmitBlocked = Boolean(isVisualEditMode && !selectedVisualEditElement)
   const isSendDisabled = Boolean(isComposerDisabled || isPromptEmpty || isVisualEditSubmitBlocked)
-  const canEnableVisualEdit = Boolean(hasPreview && canCode && !isSubmitting)
+  const canEnableVisualEdit = Boolean(isVisualEditEnabled && !isSubmitting)
   const selectedVisualEditSourceLocation = selectedVisualEditElement
     ? parseVisualEditSource(selectedVisualEditElement.source)
     : null
@@ -45,7 +49,7 @@ export function ConversationComposer({
       return '当前任务完成后可继续输入'
     }
 
-    if (!canCode) {
+    if (!isSubmitEnabled) {
       return '当前状态暂不能生成或修改'
     }
 
@@ -67,12 +71,8 @@ export function ConversationComposer({
       return '当前任务完成后可使用可视化编辑'
     }
 
-    if (!hasPreview) {
+    if (!isVisualEditEnabled) {
       return '预览加载后可使用可视化编辑'
-    }
-
-    if (!canCode) {
-      return '当前状态暂不能生成或修改'
     }
 
     return '开启可视化编辑模式'
@@ -92,8 +92,18 @@ export function ConversationComposer({
       return
     }
 
-    if (onSubmitMessage(nextPrompt)) {
+    if (isVisualEditMode && !selectedVisualEditElement) {
+      return
+    }
+
+    const submitPrompt =
+      isVisualEditMode && selectedVisualEditElement
+        ? buildVisualEditPrompt(nextPrompt, selectedVisualEditElement)
+        : nextPrompt
+
+    if (onSubmitMessage(submitPrompt)) {
       setPrompt('')
+      onVisualEditModeChange?.(false)
     }
   }
 

@@ -8,6 +8,8 @@ interface WorkbenchRuntimeSnapshot {
   isSubmitting: boolean
   isVisualEditMode: boolean
   selectedVisualEditElement: VisualEditElement | null
+  previewRefreshVersion: number
+  isPreviewReady: boolean
 }
 
 interface WorkbenchRuntimeActions {
@@ -16,6 +18,8 @@ interface WorkbenchRuntimeActions {
   setSubmitting: (isSubmitting: boolean) => void
   setVisualEditMode: (enabled: boolean) => void
   setSelectedVisualEditElement: (element: VisualEditElement | null) => void
+  setPreviewReady: (isPreviewReady: boolean) => void
+  requestPreviewRefresh: () => void
 }
 
 type WorkbenchRuntimeState = WorkbenchRuntimeSnapshot & WorkbenchRuntimeActions
@@ -26,6 +30,8 @@ const initialRuntimeSnapshot: WorkbenchRuntimeSnapshot = {
   isSubmitting: false,
   isVisualEditMode: false,
   selectedVisualEditElement: null,
+  previewRefreshVersion: 0,
+  isPreviewReady: false,
 }
 
 export const useWorkbenchRuntimeStore = create<WorkbenchRuntimeState>()((set) => ({
@@ -51,4 +57,13 @@ export const useWorkbenchRuntimeStore = create<WorkbenchRuntimeState>()((set) =>
         : { isVisualEditMode: false, selectedVisualEditElement: null },
     ),
   setSelectedVisualEditElement: (element) => set({ selectedVisualEditElement: element }),
+  setPreviewReady: (isPreviewReady) =>
+    set((state) => ({
+      isPreviewReady,
+      selectedVisualEditElement: isPreviewReady ? state.selectedVisualEditElement : null,
+    })),
+  requestPreviewRefresh: () =>
+    set((state) => ({
+      previewRefreshVersion: state.previewRefreshVersion + 1,
+    })),
 }))
