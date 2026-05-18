@@ -1,4 +1,3 @@
-import type { AppCaseSummary } from '@/api/generated/models'
 import { Avatar, Button, Card, Tag } from 'antd'
 import { ExternalLink } from 'lucide-react'
 
@@ -11,6 +10,20 @@ import {
 } from '../utils/case'
 import { CaseCover } from './CaseCover'
 
+export interface LegacyAppCaseSummary {
+  id?: string
+  title?: string
+  summary?: string
+  coverUrl?: string
+  previewUrl?: string
+  reviewedAt?: string
+  featured?: boolean
+  author?: {
+    nickname?: string
+    avatar?: string
+  }
+}
+
 /**
  * @deprecated 旧案例卡片组件；新案例广场请使用 src/features/cases-square/components/PublicCaseCard。
  */
@@ -18,8 +31,8 @@ export function CaseCard({
   appCase,
   onOpen,
 }: {
-  appCase: AppCaseSummary
-  onOpen?: (appCase: AppCaseSummary) => void
+  appCase: LegacyAppCaseSummary
+  onOpen?: (appCase: LegacyAppCaseSummary) => void
 }) {
   const title = getCaseTitle(appCase.title)
   const summary = getCaseSummary(appCase.summary)

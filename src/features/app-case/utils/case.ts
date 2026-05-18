@@ -1,7 +1,10 @@
-import type { AppAuthor } from '@/api/generated/models'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { APP_CASE_STATUS_LABELS, isAppCaseStatus } from '../types'
+
+interface CaseAuthor {
+  nickname?: string
+}
 
 /**
  * @deprecated 旧案例模块工具函数，仅为渐进移除保留。
@@ -65,7 +68,7 @@ export function formatCaseDateTime(value: string | undefined) {
 /**
  * @deprecated 旧案例模块工具函数，仅为渐进移除保留。
  */
-export function getCaseAuthorName(author: AppAuthor | undefined) {
+export function getCaseAuthorName(author: CaseAuthor | undefined) {
   return author?.nickname?.trim() || '未知用户'
 }
 

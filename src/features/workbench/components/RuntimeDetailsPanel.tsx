@@ -13,11 +13,11 @@ import {
   Wrench,
 } from 'lucide-react'
 
-import { parseMessageMetadata } from '../types'
 import {
   getActivityDescription,
   getActivityDetailText,
   getActivityLineCount,
+  parseMessageMetadata,
   type ConversationActivityItem,
   type ConversationActivityStatus,
 } from '../utils/conversationTimeline'

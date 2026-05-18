@@ -1,7 +1,32 @@
-import type { AppChatMessageInfo } from '@/api/generated/models'
-
-import { parseMessageMetadata, type RuntimeDetailEvent } from '../types'
 import { getMessageTypeLabel, getTaskStatusLabel, getTaskStepLabel } from './status'
+
+export interface AppChatMessageInfo {
+  id?: string
+  appId?: string
+  role?: string
+  contentType?: string
+  content?: string
+  metadata?: string
+  createdAt?: string
+}
+
+export interface RuntimeDetailEvent {
+  id: string
+  eventType: string
+  appId?: string
+  taskId?: string
+  taskEventId?: string
+  status?: string
+  currentStep?: string
+  messageId?: string
+  role?: string
+  messageType?: string
+  contentType?: string
+  content?: string
+  metadata?: string
+  createdAt?: string
+  receivedAt: number
+}
 
 export interface WorkbenchChatMessageInfo extends AppChatMessageInfo {
   key?: string
@@ -46,6 +71,22 @@ export interface WorkbenchChatListItem extends WorkbenchChatMessageInfo {
   content: string
   sortValue: number
   order: number
+}
+
+export function parseMessageMetadata(metadata: string | undefined): Record<string, unknown> | null {
+  if (!metadata) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(metadata)
+
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null
+  } catch {
+    return null
+  }
 }
 
 export type ConversationActivityKind =

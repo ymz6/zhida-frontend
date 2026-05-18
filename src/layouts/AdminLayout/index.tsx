@@ -54,7 +54,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { message, modal } = App.useApp()
-  const userInfo = useAuthSessionStore((state) => state.userInfo)
+  const userInfo = useAuthSessionStore((state) => state.user)
   const logoutMutation = useLogout()
   const selectedKey = getSelectedKey(location.pathname)
   const [collapsed, setCollapsed] = useState(false)

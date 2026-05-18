@@ -69,30 +69,6 @@ export function normalizeVisualEditElementPayload(payload: unknown): VisualEditE
   }
 }
 
-export function buildVisualEditPrompt(requirement: string, element: VisualEditElement) {
-  const sourceLocation = parseVisualEditSource(element.source)
-  const visualEditPayload = {
-    id: element.id,
-    tag: element.tag,
-    text: element.text,
-    source: element.source,
-    filePath: sourceLocation.filePath,
-    lineNumber: sourceLocation.lineNumber,
-    columnNumber: sourceLocation.columnNumber,
-    sourceLocation,
-  }
-
-  // 这段协议块会被后端/Agent 读取，用户侧展示时会被解析成摘要。
-  return `请对以下可视化选中的元素进行定向修改。
-
-修改需求：
-${requirement}
-
-<zhida-visual-edit>
-${JSON.stringify(visualEditPayload, null, 2)}
-</zhida-visual-edit>`
-}
-
 export function parseVisualEditPrompt(content: string | undefined): ParsedVisualEditPrompt | null {
   if (!content) {
     return null

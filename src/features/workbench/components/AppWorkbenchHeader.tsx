@@ -1,29 +1,12 @@
 import zhidaLogo from '@/assets/zhida-logo.svg'
 import { Link } from '@tanstack/react-router'
-import { Button, Dropdown, Layout, Popover, Tooltip } from 'antd'
-import { Download, MoreHorizontal, Rocket } from 'lucide-react'
+import { Button, Dropdown, Layout } from 'antd'
+import { Download, MoreHorizontal } from 'lucide-react'
 import type { MenuProps } from 'antd'
-import type { ReactNode } from 'react'
 
 const headerButtonClassName = 'h-8! rounded-full! px-3! text-sm! font-medium!'
 
-export function AppWorkbenchHeader({
-  appName,
-  deployBlockedReason,
-  isDeployPending,
-  canDeploy,
-  hasDeployUrl,
-  deployInfoPopoverContent,
-  onConfirmDeploy,
-}: {
-  appName?: string
-  deployBlockedReason?: string
-  isDeployPending?: boolean
-  canDeploy?: boolean
-  hasDeployUrl?: boolean
-  deployInfoPopoverContent?: ReactNode
-  onConfirmDeploy: () => void
-}) {
+export function AppWorkbenchHeader({ appName }: { appName?: string }) {
   const moreMenuItems: MenuProps['items'] = [
     {
       key: 'download',
@@ -78,54 +61,6 @@ export function AppWorkbenchHeader({
             更多
           </Button>
         </Dropdown>
-
-        {hasDeployUrl && deployInfoPopoverContent ? (
-          <Popover
-            title={null}
-            content={deployInfoPopoverContent}
-            placement="bottomRight"
-            trigger="hover"
-            mouseEnterDelay={0.15}
-          >
-            <span className="inline-flex">
-              <Button
-                type="primary"
-                loading={isDeployPending}
-                disabled={!canDeploy}
-                onClick={onConfirmDeploy}
-                icon={
-                  <Rocket
-                    className="size-4"
-                    aria-hidden="true"
-                  />
-                }
-                className={headerButtonClassName}
-              >
-                {isDeployPending ? '部署中' : '重新部署'}
-              </Button>
-            </span>
-          </Popover>
-        ) : (
-          <Tooltip title={canDeploy ? undefined : deployBlockedReason}>
-            <span className="inline-flex">
-              <Button
-                type="primary"
-                loading={isDeployPending}
-                disabled={!canDeploy}
-                onClick={onConfirmDeploy}
-                icon={
-                  <Rocket
-                    className="size-4"
-                    aria-hidden="true"
-                  />
-                }
-                className={headerButtonClassName}
-              >
-                {isDeployPending ? '部署中' : '部署项目'}
-              </Button>
-            </span>
-          </Tooltip>
-        )}
       </div>
     </Layout.Header>
   )

@@ -1,6 +1,13 @@
-import type { AppChatMessageInfo, AppDetail } from '@/api/generated/models'
+import type { AppChatMessageInfo, WorkbenchChatMessageInfo } from '../utils/conversationTimeline'
 
-import type { WorkbenchChatMessageInfo } from '../utils/conversationTimeline'
+interface MockAppDetail {
+  id: string
+  name: string
+  status: string
+  previewUrl: string
+  initPrompt: string
+  errorMessage?: string
+}
 
 const MOCK_PREVIEW_HTML = `
 <!doctype html>
@@ -83,14 +90,11 @@ function createMockPreviewUrl() {
 }
 
 export function getMockWorkbenchData(appId: string) {
-  const appDetail: AppDetail = {
+  const appDetail: MockAppDetail = {
     id: appId,
     name: '客户成功运营台',
     status: 'READY',
     previewUrl: createMockPreviewUrl(),
-    deployStatus: 'DEPLOYED',
-    deployUrl: 'https://example.com/zhida/customer-success',
-    deployedAt: '2026-05-16 16:30:00',
     initPrompt: '生成一个面向客户成功团队的运营工作台。',
   }
 

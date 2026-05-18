@@ -1,4 +1,3 @@
-import type { AppChatMessageInfo } from '@/api/generated/models'
 import { Bubble } from '@ant-design/x'
 import { Empty, Skeleton } from 'antd'
 import { Bot, Crosshair, UserRound } from 'lucide-react'
@@ -6,6 +5,7 @@ import type { ReactNode } from 'react'
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 
 import {
+  type AppChatMessageInfo,
   buildWorkbenchChatMessages,
   type WorkbenchChatMessageInfo,
 } from '../utils/conversationTimeline'
