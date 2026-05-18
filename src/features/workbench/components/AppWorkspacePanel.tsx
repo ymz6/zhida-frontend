@@ -43,7 +43,7 @@ export function AppWorkspacePanel({ app, errorMessage }: { app?: AppVO; errorMes
             errorMessage={errorMessage}
           />
         )}
-        {activeWorkspaceTab === 'code' && <CodeContent />}
+        {activeWorkspaceTab === 'code' && <CodeContent appId={app?.id} />}
         {activeWorkspaceTab === 'settings' && <SettingsContent />}
       </div>
     </section>
