@@ -4,6 +4,7 @@ import { Bot, Crosshair, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 
+import { useWorkbenchRuntimeStore } from '../stores/useWorkbenchRuntimeStore'
 import {
   type AppChatMessageInfo,
   buildWorkbenchChatMessages,
@@ -101,12 +102,8 @@ export function ConversationPanel({
   hasMoreMessages,
   isLoadingMoreMessages,
   canCode,
-  isSubmitting,
-  previewUrl,
-  isVisualEditMode,
-  selectedVisualEditElement,
+  hasPreview,
   onLoadMoreMessages,
-  onVisualEditModeChange,
   onSubmitMessage,
 }: {
   persistedMessages: AppChatMessageInfo[]
@@ -115,14 +112,16 @@ export function ConversationPanel({
   hasMoreMessages?: boolean
   isLoadingMoreMessages?: boolean
   canCode?: boolean
-  isSubmitting?: boolean
-  previewUrl?: string
-  isVisualEditMode?: boolean
-  selectedVisualEditElement?: VisualEditElement | null
+  hasPreview?: boolean
   onLoadMoreMessages?: () => Promise<void>
-  onVisualEditModeChange?: (enabled: boolean) => void
   onSubmitMessage: (prompt: string) => boolean
 }) {
+  const isSubmitting = useWorkbenchRuntimeStore((state) => state.isSubmitting)
+  const isVisualEditMode = useWorkbenchRuntimeStore((state) => state.isVisualEditMode)
+  const selectedVisualEditElement = useWorkbenchRuntimeStore(
+    (state) => state.selectedVisualEditElement,
+  )
+  const setVisualEditMode = useWorkbenchRuntimeStore((state) => state.setVisualEditMode)
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const scrollContentRef = useRef<HTMLDivElement | null>(null)
   const restoreScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null)
@@ -324,10 +323,10 @@ export function ConversationPanel({
       <ConversationComposer
         canCode={canCode}
         isSubmitting={isSubmitting}
-        previewUrl={previewUrl}
+        hasPreview={hasPreview}
         isVisualEditMode={isVisualEditMode}
         selectedVisualEditElement={selectedVisualEditElement}
-        onVisualEditModeChange={onVisualEditModeChange}
+        onVisualEditModeChange={setVisualEditMode}
         onSubmitMessage={handleSubmitMessage}
       />
     </section>

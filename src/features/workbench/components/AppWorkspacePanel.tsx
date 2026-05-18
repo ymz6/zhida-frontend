@@ -1,40 +1,24 @@
 import { useEffect, useState } from 'react'
+import type { AppVO } from '@/api/generated/models'
 
+import { useWorkbenchRuntimeStore } from '../stores/useWorkbenchRuntimeStore'
 import { AppWorkspaceTabBar } from './AppWorkspaceTabBar'
 import type { AppWorkspaceTabKey } from './AppWorkspaceTabBar'
-import type { VisualEditElement } from '../utils/visualEdit'
 import { CodeContent } from './CodeContent'
-import { DEFAULT_PREVIEW_DOCK_STATE, PreviewContent, type PreviewDockState } from './PreviewContent'
+import { PreviewContent } from './PreviewContent'
 import { SettingsContent } from './SettingsContent'
 
-export function AppWorkspacePanel({
-  previewUrl,
-  previewReloadKey,
-  isGenerating,
-  errorMessage,
-  isVisualEditMode,
-  onVisualEditModeChange,
-  onVisualEditElementSelect,
-}: {
-  previewUrl?: string
-  previewReloadKey?: number
-  isGenerating?: boolean
-  errorMessage?: string
-  isVisualEditMode?: boolean
-  onVisualEditModeChange?: (enabled: boolean) => void
-  onVisualEditElementSelect?: (element: VisualEditElement) => void
-}) {
+export function AppWorkspacePanel({ app, errorMessage }: { app?: AppVO; errorMessage?: string }) {
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<AppWorkspaceTabKey>('preview')
-  const [previewDockState, setPreviewDockState] = useState<PreviewDockState>(
-    DEFAULT_PREVIEW_DOCK_STATE,
-  )
+  const isVisualEditMode = useWorkbenchRuntimeStore((state) => state.isVisualEditMode)
+  const setVisualEditMode = useWorkbenchRuntimeStore((state) => state.setVisualEditMode)
 
   const handleWorkspaceTabChange = (key: AppWorkspaceTabKey) => {
     setActiveWorkspaceTab(key)
 
     if (key !== 'preview' && isVisualEditMode) {
       // 离开预览页签后无法继续点选 iframe 元素，需要同步关闭编辑模式。
-      onVisualEditModeChange?.(false)
+      setVisualEditMode(false)
     }
   }
 
@@ -55,14 +39,8 @@ export function AppWorkspacePanel({
       <div className="flex min-h-0 flex-1 flex-col bg-white">
         {activeWorkspaceTab === 'preview' && (
           <PreviewContent
-            previewUrl={previewUrl}
-            previewReloadKey={previewReloadKey}
-            isGenerating={isGenerating}
+            appId={app?.id}
             errorMessage={errorMessage}
-            isVisualEditMode={isVisualEditMode}
-            onVisualEditElementSelect={onVisualEditElementSelect}
-            previewDockState={previewDockState}
-            onPreviewDockStateChange={setPreviewDockState}
           />
         )}
         {activeWorkspaceTab === 'code' && <CodeContent />}

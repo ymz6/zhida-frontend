@@ -13,6 +13,7 @@ type PreviewActionDockProps = {
   isExpanded: boolean
   offsetY: number
   previewUrl?: string
+  canRefresh?: boolean
   onCollapse: () => void
   onExpand: () => void
   onOpenPreview: () => void
@@ -59,6 +60,7 @@ export function PreviewActionDock({
   isExpanded,
   offsetY,
   previewUrl,
+  canRefresh,
   onCollapse,
   onExpand,
   onOpenPreview,
@@ -83,7 +85,7 @@ export function PreviewActionDock({
           />
           <button
             type="button"
-            disabled={!previewUrl}
+            disabled={!(canRefresh ?? previewUrl)}
             onClick={onRefresh}
             className={previewDockActionButtonClassName}
             title="刷新"

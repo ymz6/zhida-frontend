@@ -13,7 +13,7 @@ const composerActiveActionButtonClassName = `${composerActionButtonClassName} bg
 export function ConversationComposer({
   canCode,
   isSubmitting,
-  previewUrl,
+  hasPreview,
   isVisualEditMode,
   selectedVisualEditElement,
   onVisualEditModeChange,
@@ -21,7 +21,7 @@ export function ConversationComposer({
 }: {
   canCode?: boolean
   isSubmitting?: boolean
-  previewUrl?: string
+  hasPreview?: boolean
   isVisualEditMode?: boolean
   selectedVisualEditElement?: VisualEditElement | null
   onVisualEditModeChange?: (enabled: boolean) => void
@@ -33,7 +33,7 @@ export function ConversationComposer({
   const isPromptEmpty = prompt.trim().length === 0
   const isVisualEditSubmitBlocked = Boolean(isVisualEditMode && !selectedVisualEditElement)
   const isSendDisabled = Boolean(isComposerDisabled || isPromptEmpty || isVisualEditSubmitBlocked)
-  const canEnableVisualEdit = Boolean(previewUrl && canCode && !isSubmitting)
+  const canEnableVisualEdit = Boolean(hasPreview && canCode && !isSubmitting)
   const selectedVisualEditSourceLocation = selectedVisualEditElement
     ? parseVisualEditSource(selectedVisualEditElement.source)
     : null
@@ -67,7 +67,7 @@ export function ConversationComposer({
       return '当前任务完成后可使用可视化编辑'
     }
 
-    if (!previewUrl) {
+    if (!hasPreview) {
       return '预览加载后可使用可视化编辑'
     }
 

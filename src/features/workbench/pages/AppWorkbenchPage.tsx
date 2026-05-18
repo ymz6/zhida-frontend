@@ -1,11 +1,13 @@
 import { useGetApp } from '@/api/generated/endpoints/app'
 import type { AppVO } from '@/api/generated/models'
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { Button, Layout, Result, Spin, Splitter } from 'antd'
 
 import { AppWorkbenchHeader } from '../components/AppWorkbenchHeader'
 import { AppWorkspacePanel } from '../components/AppWorkspacePanel'
 import { ConversationPanel } from '../components/ConversationPanel'
+import { useWorkbenchRuntimeStore } from '../stores/useWorkbenchRuntimeStore'
 import type { AppChatMessageInfo, WorkbenchChatMessageInfo } from '../utils/conversationTimeline'
 
 const APP_FORBIDDEN_CODE = 40300
@@ -16,6 +18,7 @@ const emptyStreamMessages: WorkbenchChatMessageInfo[] = []
 export function AppWorkbenchPage() {
   const navigate = useNavigate()
   const { appId } = useParams({ from: '/workbench_/$appId' })
+  const enterWorkbenchApp = useWorkbenchRuntimeStore((state) => state.enterApp)
   const appQuery = useGetApp<AppVO | undefined, { code?: number; message?: string }>(appId, {
     query: {
       retry: false,
@@ -27,8 +30,11 @@ export function AppWorkbenchPage() {
   const appErrorMessage = appQuery.error?.message
   const appDetail = appQuery.data
 
-  const isTaskRunning = false
   const canSubmitMessage = false
+
+  useEffect(() => {
+    enterWorkbenchApp(appId)
+  }, [appId, enterWorkbenchApp])
 
   const renderResultPage = (status: '403' | '404' | '500', title: string, subTitle: string) => (
     <main className="fixed inset-0 z-0 flex items-center justify-center bg-slate-50 px-4">
@@ -108,21 +114,12 @@ export function AppWorkbenchPage() {
               hasMoreMessages={false}
               isLoadingMoreMessages={false}
               canCode={canSubmitMessage}
-              isSubmitting={false}
-              previewUrl={appDetail.previewUrl}
-              isVisualEditMode={false}
-              selectedVisualEditElement={null}
+              hasPreview={Boolean(appDetail.id)}
               onSubmitMessage={handleSubmitMessage}
             />
           </Splitter.Panel>
           <Splitter.Panel min={420}>
-            <AppWorkspacePanel
-              key={appId}
-              previewUrl={appDetail.previewUrl}
-              previewReloadKey={0}
-              isGenerating={isTaskRunning}
-              isVisualEditMode={false}
-            />
+            <AppWorkspacePanel app={appDetail} />
           </Splitter.Panel>
         </Splitter>
       </Layout.Content>
