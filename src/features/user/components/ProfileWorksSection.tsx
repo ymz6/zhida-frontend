@@ -8,6 +8,7 @@ import { Alert, Empty, Pagination, Skeleton, Tabs } from 'antd'
 import {
   ArrowUpRight,
   CircleCheck,
+  CircleMinus,
   CircleX,
   Clock3,
   FilePenLine,
@@ -28,6 +29,7 @@ const workStatusRequestMap: Record<Exclude<ProfileWorkStatus, 'all'>, ListMyCase
   pending: ListMyCasesRequestStatus.PENDING,
   approved: ListMyCasesRequestStatus.APPROVED,
   rejected: ListMyCasesRequestStatus.REJECTED,
+  withdrawn: ListMyCasesRequestStatus.WITHDRAWN,
 }
 
 const workStatusIcons = {
@@ -36,6 +38,7 @@ const workStatusIcons = {
   pending: <Clock3 className="size-4" />,
   approved: <CircleCheck className="size-4" />,
   rejected: <CircleX className="size-4" />,
+  withdrawn: <CircleMinus className="size-4" />,
 } satisfies Record<ProfileWorkStatus, ReactNode>
 
 const workStatusTabs = (Object.keys(workStatusLabels) as ProfileWorkStatus[]).map((status) => ({
@@ -81,9 +84,7 @@ export function ProfileWorksSection() {
     <section className="relative z-10 rounded-3xl border border-slate-200/70 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="flex items-center text-2xl font-bold text-slate-950">
-            我的作品
-          </h2>
+          <h2 className="flex items-center text-2xl font-bold text-slate-950">我的作品</h2>
         </div>
 
         <Link

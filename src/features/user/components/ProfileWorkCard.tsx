@@ -3,9 +3,14 @@ import type { AppVO } from '@/api/generated/models'
 import { Badge, Button, Tag } from 'antd'
 import { ArrowUpRight, Star } from 'lucide-react'
 
-import { formatProfileDateTime, getAppAuditStatus, getAppDisplayName } from '../utils/profile'
+import {
+  formatProfileDateTime,
+  getAppAuditStatus,
+  getAppDisplayName,
+  type ProfileWorkAuditStatus,
+} from '../utils/profile'
 
-export type ProfileWorkStatus = 'all' | 'draft' | 'pending' | 'approved' | 'rejected'
+export type ProfileWorkStatus = 'all' | ProfileWorkAuditStatus
 
 export const workStatusLabels: Record<ProfileWorkStatus, string> = {
   all: '全部',
@@ -13,13 +18,15 @@ export const workStatusLabels: Record<ProfileWorkStatus, string> = {
   pending: '审核中',
   approved: '已通过',
   rejected: '未通过',
+  withdrawn: '已撤回',
 }
 
-const workStatusColors: Record<Exclude<ProfileWorkStatus, 'all'>, string> = {
+const workStatusColors: Record<ProfileWorkAuditStatus, string> = {
   draft: 'default',
   pending: 'processing',
   approved: 'success',
   rejected: 'error',
+  withdrawn: 'warning',
 }
 
 export function ProfileWorkCard({ work, onOpen }: { work: AppVO; onOpen: (work: AppVO) => void }) {
