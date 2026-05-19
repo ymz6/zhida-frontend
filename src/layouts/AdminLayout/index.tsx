@@ -23,7 +23,7 @@ const { Link: TypographyLink, Text } = Typography
 const adminMenuItems = [
   {
     key: '/admin',
-    label: '运行监控',
+    label: 'LLM调用明细',
     icon: <Activity className="size-4" />,
   },
   {
