@@ -9,6 +9,5 @@ export type ChatStreamMessageT = typeof ChatStreamMessageT[keyof typeof ChatStre
 
 
 export const ChatStreamMessageT = {
-  REASONING: 'REASONING',
   CONTENT: 'CONTENT',
 } as const;

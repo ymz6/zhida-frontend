@@ -8,6 +8,7 @@
 export * from './batchGetFollowStatusParams';
 export * from './changeAvatarBody';
 export * from './getLlmLogOverviewParams';
+export * from './listAdminAppCasesParams';
 export * from './listAppAuditRecordsParams';
 export * from './listAppMessagesParams';
 export * from './listAppsParams';

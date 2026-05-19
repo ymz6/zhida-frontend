@@ -10,9 +10,10 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FolderKanban,
+  ClipboardCheck,
   Globe,
   LogOut,
+  Star,
   Users,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -32,15 +33,24 @@ const adminMenuItems = [
     icon: <Users className="size-4" />,
   },
   {
-    key: '/admin/cases',
-    label: '案例管理',
-    icon: <FolderKanban className="size-4" />,
+    key: '/admin/case-audits',
+    label: '案例审核管理',
+    icon: <ClipboardCheck className="size-4" />,
+  },
+  {
+    key: '/admin/app-cases',
+    label: '应用案例管理',
+    icon: <Star className="size-4" />,
   },
 ] satisfies NonNullable<MenuProps['items']>
 
 function getSelectedKey(pathname: string) {
-  if (pathname.startsWith('/admin/cases')) {
-    return '/admin/cases'
+  if (pathname.startsWith('/admin/case-audits')) {
+    return '/admin/case-audits'
+  }
+
+  if (pathname.startsWith('/admin/app-cases')) {
+    return '/admin/app-cases'
   }
 
   if (pathname.startsWith('/admin/users')) {
@@ -101,8 +111,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return
     }
 
-    if (targetKey === '/admin/cases') {
-      void navigate({ to: '/admin/cases' })
+    if (targetKey === '/admin/case-audits') {
+      void navigate({ to: '/admin/case-audits' })
+      return
+    }
+
+    if (targetKey === '/admin/app-cases') {
+      void navigate({ to: '/admin/app-cases' })
       return
     }
 

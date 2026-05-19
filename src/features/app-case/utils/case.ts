@@ -108,5 +108,5 @@ export function openCasePreview(previewUrl: string | undefined) {
 export function invalidateCaseQueries(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: ['/cases'] })
   void queryClient.invalidateQueries({ queryKey: ['/cases/mine'] })
-  void queryClient.invalidateQueries({ queryKey: ['/admin/cases'] })
+  void queryClient.invalidateQueries({ queryKey: ['/admin/app-cases'] })
 }

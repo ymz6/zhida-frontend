@@ -27,6 +27,7 @@ import type {
 
 import type {
   ListAuditsParams,
+  ResponseAuditRecordVO,
   ResponsePageResultAuditRecordVO,
   ResponseVoid,
   ReviewAuditRequest,
@@ -40,6 +41,111 @@ import { customInstance } from '../../mutator/custom-instance';
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
+
+
+export const getAudit = (
+    recordId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ResponseAuditRecordVO>(
+      {url: `/admin/audits/${recordId}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetAuditQueryKey = (recordId: string,) => {
+    return [
+    `/admin/audits/${recordId}`
+    ] as const;
+    }
+
+
+export const getGetAuditQueryOptions = <TData = Awaited<ReturnType<typeof getAudit>>, TError = unknown>(recordId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAudit>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuditQueryKey(recordId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAudit>>> = ({ signal }) => getAudit(recordId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(recordId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAudit>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getAudit>>>
+export type GetAuditQueryError = unknown
+
+
+export function useGetAudit<TData = Awaited<ReturnType<typeof getAudit>>, TError = unknown>(
+ recordId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAudit>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAudit>>,
+          TError,
+          Awaited<ReturnType<typeof getAudit>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAudit<TData = Awaited<ReturnType<typeof getAudit>>, TError = unknown>(
+ recordId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAudit>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAudit>>,
+          TError,
+          Awaited<ReturnType<typeof getAudit>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAudit<TData = Awaited<ReturnType<typeof getAudit>>, TError = unknown>(
+ recordId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAudit>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetAudit<TData = Awaited<ReturnType<typeof getAudit>>, TError = unknown>(
+ recordId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAudit>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAuditQueryOptions(recordId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+export const invalidateGetAudit = async (
+ queryClient: QueryClient, recordId: string, options?: InvalidateOptions
+  ): Promise<QueryClient> => {
+
+  await queryClient.invalidateQueries({ queryKey: getGetAuditQueryKey(recordId) }, options);
+
+  return queryClient;
+}
+
+export const useSetGetAuditQueryData = () => {
+  const queryClient = useQueryClient();
+  return (recordId: string,updater: Awaited<ReturnType<typeof getAudit>> | undefined | ((old: Awaited<ReturnType<typeof getAudit>> | undefined) => Awaited<ReturnType<typeof getAudit>> | undefined)) => {
+    queryClient.setQueryData(getGetAuditQueryKey(recordId), updater);
+  };
+}
+
+export const useGetGetAuditQueryData = () => {
+  const queryClient = useQueryClient();
+  return (recordId: string,) =>
+    queryClient.getQueryData<Awaited<ReturnType<typeof getAudit>>>(getGetAuditQueryKey(recordId));
+}
 
 
 export const reviewAudit = (

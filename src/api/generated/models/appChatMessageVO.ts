@@ -8,7 +8,6 @@
 export interface AppChatMessageVO {
   id?: string;
   role?: string;
-  reasoningContent?: string;
   content?: string;
   createdAt?: string;
 }
