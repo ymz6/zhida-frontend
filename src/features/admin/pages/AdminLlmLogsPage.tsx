@@ -349,7 +349,7 @@ export function AdminLlmLogsPage() {
         <div>
           <h1 className="m-0 text-2xl font-semibold text-slate-950">LLM调用明细</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            查看模型调用量、Token 消耗、耗时与失败情况。
+            查看模型调用量、Token 消耗、耗时与失败情况
           </p>
         </div>
 
