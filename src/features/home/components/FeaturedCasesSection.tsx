@@ -1,34 +1,36 @@
+import { useListCases } from '@/api/generated/endpoints/case'
+import type { PageResultAppVO } from '@/api/generated/models'
 import { Link } from '@tanstack/react-router'
+import { Alert, Skeleton } from 'antd'
 import { ArrowUpRight, Star } from 'lucide-react'
 
 import { PublicCaseCard } from '@/features/cases-square/components/PublicCaseCard'
-import type { PublicCaseCardData } from '@/features/cases-square/components/PublicCaseCard'
+import {
+  getPublicCaseErrorMessage,
+  mapAppToPublicCaseCardData,
+  openPublicCaseDetailInNewTab,
+} from '@/features/cases-square/utils/publicCase'
 
-const featuredCases = [
-  {
-    id: 1,
-    title: '会员运营后台',
-    authorName: 'Krd168409708',
-    createdAt: '2026-03-08',
-    isFeatured: true,
-  },
-  {
-    id: 2,
-    title: '企业官网',
-    authorName: 'Luna',
-    createdAt: '2026-03-16',
-    isFeatured: true,
-  },
-  {
-    id: 3,
-    title: '数据看板',
-    authorName: 'Ming',
-    createdAt: '2026-04-02',
-    isFeatured: true,
-  },
-] satisfies PublicCaseCardData[]
+const FEATURED_CASES_SIZE = 3
 
 export function FeaturedCasesSection() {
+  const featuredCasesQuery = useListCases<PageResultAppVO | undefined, { message?: string }>(
+    {
+      request: {
+        pageNum: 1,
+        pageSize: FEATURED_CASES_SIZE,
+        featuredOnly: true,
+      },
+    },
+    {
+      query: {
+        retry: false,
+        select: (response) => response.data,
+      },
+    },
+  )
+  const featuredCases = featuredCasesQuery.data?.list ?? []
+
   return (
     <section className="relative z-10 mx-auto mt-16 max-w-7xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -57,14 +59,39 @@ export function FeaturedCasesSection() {
         </Link>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {featuredCases.map((appCase) => (
-          <PublicCaseCard
-            key={appCase.id}
-            appCase={appCase}
-          />
-        ))}
-      </div>
+      {featuredCasesQuery.isError ? (
+        <Alert
+          showIcon
+          type="error"
+          title="精选案例加载失败"
+          description={getPublicCaseErrorMessage(featuredCasesQuery.error, '请稍后重试')}
+          className="mt-5 rounded-xl"
+        />
+      ) : featuredCasesQuery.isLoading ? (
+        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: FEATURED_CASES_SIZE }).map((_, index) => (
+            <Skeleton.Node
+              key={index}
+              active
+              className="h-70! w-full! rounded-lg!"
+            />
+          ))}
+        </div>
+      ) : featuredCases.length > 0 ? (
+        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {featuredCases.map((app, index) => {
+            const appCase = mapAppToPublicCaseCardData(app)
+
+            return (
+              <PublicCaseCard
+                key={app.id ?? `${app.name ?? 'featured-case'}-${index}`}
+                appCase={appCase}
+                onOpen={(currentCase) => openPublicCaseDetailInNewTab(currentCase.id)}
+              />
+            )
+          })}
+        </div>
+      ) : null}
     </section>
   )
 }
