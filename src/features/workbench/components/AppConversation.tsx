@@ -2,7 +2,7 @@ import type { AppVO } from '@/api/generated/models'
 import { Bubble } from '@ant-design/x'
 import { Alert, Button, Empty, Spin } from 'antd'
 import { Crosshair } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { useAppChatStream } from '../hooks/useAppChatStream'
 import { useAppConversationMessages } from '../hooks/useAppConversationMessages'
@@ -11,6 +11,7 @@ import {
   getAppConversationBubbleRole,
   type AppConversationDisplayMessage,
 } from '../utils/appConversationMessages'
+import { isAppConversationNearBottom } from '../utils/appConversationScroll'
 import { parseVisualEditPrompt } from '../utils/visualEdit'
 import { AppAssistantMessageContent } from './AppAssistantMessageContent'
 import { AppConversationAvatar } from './AppConversationAvatar'
@@ -136,6 +137,8 @@ function renderAppConversationMessageContent({
 }
 
 export function AppConversation({ app }: { app: AppVO }) {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const shouldStickToBottomRef = useRef(true)
   const isSubmitting = useWorkbenchRuntimeStore((state) => state.isSubmitting)
   const isPreviewReady = useWorkbenchRuntimeStore((state) => state.isPreviewReady)
   const isVisualEditMode = useWorkbenchRuntimeStore((state) => state.isVisualEditMode)
@@ -165,6 +168,22 @@ export function AppConversation({ app }: { app: AppVO }) {
       onRetry: message.status === 'failed' ? retryLastFailedMessage : undefined,
     }),
   }))
+  const streamingContent = streamingMessages.map((message) => message.content ?? '').join('')
+
+  useEffect(() => {
+    const scrollElement = scrollContainerRef.current
+
+    if (!scrollElement || !conversationItems.length || !shouldStickToBottomRef.current) {
+      return
+    }
+
+    // 流式 Markdown 会持续改变内容高度，等本轮渲染完成后再贴到底部。
+    const frameId = window.requestAnimationFrame(() => {
+      scrollElement.scrollTop = scrollElement.scrollHeight
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [conversationItems.length, isStreaming, streamingContent])
 
   useEffect(() => {
     const appId = app.id?.trim()
@@ -184,6 +203,8 @@ export function AppConversation({ app }: { app: AppVO }) {
     // 自动首轮只负责触发普通发送链路；防重记录避免空消息 refetch 后重复请求。
     autoInitialChatAppIds.add(appId)
 
+    shouldStickToBottomRef.current = true
+
     if (!sendMessage(initialPrompt)) {
       autoInitialChatAppIds.delete(appId)
     }
@@ -196,7 +217,30 @@ export function AppConversation({ app }: { app: AppVO }) {
     sendMessage,
   ])
 
-  const handleSubmitMessage = sendMessage
+  const handleSubmitMessage = (prompt: string) => {
+    const isSent = sendMessage(prompt)
+
+    if (isSent) {
+      shouldStickToBottomRef.current = true
+    }
+
+    return isSent
+  }
+
+  const handleConversationScroll = () => {
+    const scrollElement = scrollContainerRef.current
+
+    if (!scrollElement) {
+      return
+    }
+
+    shouldStickToBottomRef.current = isAppConversationNearBottom(scrollElement)
+  }
+
+  const handleFetchNextPage = () => {
+    shouldStickToBottomRef.current = false
+    void messagesQuery.fetchNextPage()
+  }
 
   const renderConversationBody = () => {
     if (messagesQuery.isLoading) {
@@ -260,7 +304,7 @@ export function AppConversation({ app }: { app: AppVO }) {
               size="small"
               loading={messagesQuery.isFetchingNextPage}
               disabled={messagesQuery.isFetchingNextPage}
-              onClick={() => void messagesQuery.fetchNextPage()}
+              onClick={handleFetchNextPage}
             >
               加载更早消息
             </Button>
@@ -278,7 +322,11 @@ export function AppConversation({ app }: { app: AppVO }) {
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-white">
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4">
+      <div
+        ref={scrollContainerRef}
+        className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4"
+        onScroll={handleConversationScroll}
+      >
         {renderConversationBody()}
       </div>
 

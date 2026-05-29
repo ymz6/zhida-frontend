@@ -34,6 +34,7 @@ export function mapAppToPublicCaseCardData(app: AppVO): PublicCaseCardData {
     id: app.id ?? getPublicCaseTitle(app),
     title: getPublicCaseTitle(app),
     authorName: getPublicCaseAuthorName(app),
+    authorAvatar: app.author?.avatar,
     createdAt: formatPublicCaseDateTime(app.publishedAt ?? app.createdAt),
     isFeatured: Boolean(app.featured),
     coverUrl: app.coverUrl,

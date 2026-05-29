@@ -147,6 +147,7 @@ function mapAppToPublicCaseData(app: AppVO): PublicCaseCardData {
     id: app.id ?? getAppDisplayName(app),
     title: getAppDisplayName(app),
     authorName: app.author?.nickname?.trim() || '未知作者',
+    authorAvatar: app.author?.avatar,
     createdAt: formatProfileDateTime(app.publishedAt ?? app.createdAt),
     isFeatured: Boolean(app.featured),
     coverUrl: app.coverUrl,

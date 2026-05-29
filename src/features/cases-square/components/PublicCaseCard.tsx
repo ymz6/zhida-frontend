@@ -1,12 +1,13 @@
 import emptyAppCover from '@/assets/empty-app-cover.svg'
-import { Avatar, Badge, Button, Tooltip } from 'antd'
-import { Heart, Star } from 'lucide-react'
+import { Avatar, Badge } from 'antd'
+import { Star } from 'lucide-react'
 import type { KeyboardEvent, ReactNode } from 'react'
 
 export type PublicCaseCardData = {
   id: string | number
   title: string
   authorName: string
+  authorAvatar?: string
   createdAt: string
   isFeatured: boolean
   coverUrl?: string
@@ -33,21 +34,6 @@ export function PublicCaseCard({
     event.preventDefault()
     handleOpen()
   }
-  const cardAction = action ?? (
-    <Tooltip title="收藏案例">
-      <Button
-        type="text"
-        aria-label={`${appCase.title} 收藏`}
-        icon={
-          <Heart
-            className="size-5"
-            aria-hidden="true"
-          />
-        }
-        className="h-10 w-10 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100! hover:text-rose-500!"
-      />
-    </Tooltip>
-  )
   const card = (
     <article
       role={isInteractive ? 'button' : undefined}
@@ -71,8 +57,11 @@ export function PublicCaseCard({
       <div className="flex items-center gap-3 p-4">
         <Avatar
           size={44}
+          src={appCase.authorAvatar}
+          alt={appCase.authorName}
           className="shrink-0 bg-blue-50 text-blue-600"
         >
+          {/* 头像缺失或加载失败时，保留作者首字作为兜底。 */}
           {appCase.authorName.slice(0, 1)}
         </Avatar>
         <div className="min-w-0 flex-1">
@@ -83,13 +72,15 @@ export function PublicCaseCard({
             {appCase.authorName} · {appCase.createdAt}
           </p>
         </div>
-        <div
-          className="shrink-0"
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          {cardAction}
-        </div>
+        {action ? (
+          <div
+            className="shrink-0"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            {action}
+          </div>
+        ) : null}
       </div>
     </article>
   )
