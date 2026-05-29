@@ -24,11 +24,4 @@ dist-ssr
 *.sw?
 
 routeTree.gen.ts
-.agents
-.claude
-.codex
 .vscode
-openspec
-tests
-docs
-.superpowers
